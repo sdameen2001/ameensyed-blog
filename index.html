@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Syed Ameen | Personal Blog &amp; Admin Dashboard</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Explore the personal blog workspace of Syed Ameen, featuring articles on business operations, financial markets, accounting, and leadership.">
+  <meta name="keywords" content="Syed Ameen, Personal Blog, Admin Panel, B.Com Osmania University, Accounting, Operations, Finance Blog">
+  <meta name="author" content="Syed Ameen">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.ameensyed.in/">
+  <meta property="og:title" content="Syed Ameen | Blog &amp; Admin Console">
+  <meta property="og:description" content="A premium blog and content console containing thoughts on business operations and financial ledgers.">
+  <meta property="og:image" content="assets/images/profile.jpg">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+  
+  <!-- Decorative Background Glow Accents -->
+  <div class="glow-bg glow-purple"></div>
+  <div class="glow-bg glow-gold"></div>
+
+  <!-- Header Navigation -->
+  <header id="app-header">
+    <div class="nav-container">
+      <a href="#" class="brand-logo" onclick="navigateTo('home')">
+        <span class="logo-accent">A</span>meen.<span class="logo-accent-gold">B</span>log
+      </a>
+      
+      <nav class="nav-menu" id="nav-menu-id">
+        <ul>
+          <li><a href="#home" class="nav-link active" onclick="navigateTo('home')"><i class="fa-solid fa-house"></i> Home</a></li>
+          <li><a href="#admin-login" class="nav-link" id="nav-admin-link" onclick="navigateTo('admin-login')"><i class="fa-solid fa-user-gear"></i> Admin Console</a></li>
+        </ul>
+      </nav>
+      
+      <div class="nav-actions">
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme mode">
+          <i class="fa-solid fa-moon moon-icon"></i>
+          <i class="fa-solid fa-sun sun-icon"></i>
+        </button>
+        <button id="menu-toggle" class="menu-btn" aria-label="Toggle mobile menu">
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Master Content Container for SPA views -->
+  <main id="app-view-container">
+    
+    <!-- ================= 1. HOME / BLOGS FEED VIEW ================= -->
+    <section id="view-home" class="view-panel active">
+      <!-- Hero Banner -->
+      <div class="container">
+        <div class="blog-hero glass-panel">
+          <div class="hero-text">
+            <span class="hero-badge"><i class="fa-solid fa-pen-nib"></i> Syed Ameen's Workspace</span>
+            <h1>Ideas, Operations &amp; <span class="gradient-text">Finance</span></h1>
+            <p>Welcome to my professional blog! Here, I share insights on corporate accounting, administrative operations, financial market trends, and modern management leadership.</p>
+          </div>
+          <div class="hero-visual">
+            <div class="avatar-frame">
+              <div class="orbit-glow"></div>
+              <img src="assets/images/profile.jpg" alt="Syed Ameen Avatar" class="hero-avatar">
+            </div>
+          </div>
+        </div>
+        
+        <!-- Search and Category Filters -->
+        <div class="filter-controls-row">
+          <div class="search-input-box glass-panel">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="blog-search" placeholder="Search articles by title, keywords or details..." onkeyup="filterBlogs()">
+          </div>
+          
+          <div class="category-selectors">
+            <button class="cat-btn active" data-category="all" onclick="filterCategory('all')">All Articles</button>
+            <button class="cat-btn" data-category="Finance" onclick="filterCategory('Finance')"><i class="fa-solid fa-chart-line"></i> Finance</button>
+            <button class="cat-btn" data-category="Operations" onclick="filterCategory('Operations')"><i class="fa-solid fa-gears"></i> Operations</button>
+            <button class="cat-btn" data-category="Leadership" onclick="filterCategory('Leadership')"><i class="fa-solid fa-users"></i> Leadership</button>
+          </div>
+        </div>
+
+        <!-- Dynamic Blog Cards Grid -->
+        <div class="blogs-grid" id="blogs-grid-container">
+          <!-- Populated dynamically via JS -->
+        </div>
+        
+        <!-- Newsletter Subscription Box -->
+        <div class="newsletter-card glass-panel scroll-reveal">
+          <div class="news-icon"><i class="fa-solid fa-envelope-open-text"></i></div>
+          <h3>Subscribe to Operational Updates</h3>
+          <p>Get the latest posts regarding corporate ledger booking, tally prime workflows, and financial strategies delivered straight to your mailbox.</p>
+          <form id="newsletter-form" onsubmit="handleSubscribe(event)">
+            <input type="email" id="news-email" placeholder="Enter your business email" required>
+            <button type="submit" class="btn btn-primary">Subscribe</button>
+          </form>
+          <div id="newsletter-status" class="newsletter-status"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 2. POST DETAIL VIEW ================= -->
+    <section id="view-post-detail" class="view-panel">
+      <div class="container container-reader">
+        <button class="back-btn" onclick="navigateTo('home')"><i class="fa-solid fa-arrow-left-long"></i> Back to Articles</button>
+        
+        <article class="blog-reader glass-panel">
+          <header class="reader-header">
+            <span class="reader-cat" id="reader-category">Finance</span>
+            <h1 id="reader-title">Blog Title Loading...</h1>
+            <div class="reader-meta">
+              <span id="reader-date"><i class="fa-regular fa-calendar"></i> May 25, 2026</span>
+              <span id="reader-read-time"><i class="fa-regular fa-clock"></i> 5 min read</span>
+            </div>
+          </header>
+          
+          <div class="reader-banner" id="reader-banner-box">
+            <!-- Banner image loaded dynamically -->
+          </div>
+          
+          <div class="reader-content" id="reader-content-body">
+            <!-- Content parsed and loaded dynamically -->
+          </div>
+          
+          <footer class="reader-footer">
+            <div class="author-box">
+              <img src="assets/images/profile.jpg" alt="Syed Ameen Avatar" class="author-avatar">
+              <div class="author-info">
+                <h4>Written by Syed Ameen</h4>
+                <p>B.Com Graduate from Avinash Degree College, Osmania University. Operations and Relationship Management Specialist.</p>
+              </div>
+            </div>
+          </footer>
+        </article>
+      </div>
+    </section>
+
+    <!-- ================= 3. ADMIN LOGIN VIEW ================= -->
+    <section id="view-admin-login" class="view-panel">
+      <div class="container container-auth">
+        <div class="login-card glass-panel">
+          <div class="login-header">
+            <div class="lock-icon"><i class="fa-solid fa-user-shield"></i></div>
+            <h2>Admin Login Portal</h2>
+            <p>Enter administrative credentials to gain authorization and publish articles.</p>
+          </div>
+          
+          <form id="admin-login-form" onsubmit="handleLogin(event)">
+            <div class="input-group">
+              <input type="text" id="login-username" required placeholder=" ">
+              <label for="login-username">Username</label>
+              <span class="focus-border"></span>
+            </div>
+            <div class="input-group">
+              <input type="password" id="login-password" required placeholder=" ">
+              <label for="login-password">Password</label>
+              <span class="focus-border"></span>
+            </div>
+            <button type="submit" class="btn btn-primary login-btn">Login to Console</button>
+            
+            <div class="login-tip">
+              <strong>💡 Demo Access Account:</strong>
+              <span>Username: <code>admin</code> / Password: <code>admin</code></span>
+            </div>
+            <div id="login-status" class="login-status"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 4. ADMIN CONSOLE VIEW ================= -->
+    <section id="view-admin-console" class="view-panel">
+      <div class="container container-admin">
+        
+        <div class="admin-wrapper">
+          <!-- Admin Sidebar Panel -->
+          <aside class="admin-sidebar glass-panel">
+            <div class="admin-profile">
+              <img src="assets/images/profile.jpg" alt="Syed Ameen Avatar" class="admin-avatar">
+              <div class="admin-meta">
+                <h4>Ameen Syed</h4>
+                <span>Publisher Mode</span>
+              </div>
+            </div>
+            
+            <nav class="admin-nav">
+              <ul>
+                <li class="admin-nav-item active" data-subview="overview" onclick="switchSubview('overview')">
+                  <a href="#overview"><i class="fa-solid fa-chart-pie"></i> Overview Dashboard</a>
+                </li>
+                <li class="admin-nav-item" data-subview="editor" onclick="switchSubview('editor')">
+                  <a href="#editor" id="btn-editor-nav"><i class="fa-solid fa-file-pen"></i> Write New Post</a>
+                </li>
+                <li class="admin-nav-item" data-subview="manage" onclick="switchSubview('manage')">
+                  <a href="#manage"><i class="fa-solid fa-list-check"></i> Manage Articles</a>
+                </li>
+              </ul>
+            </nav>
+            
+            <button class="btn-logout" onclick="handleLogout()"><i class="fa-solid fa-right-from-bracket"></i> Exit Console</button>
+          </aside>
+          
+          <!-- Admin Subview Content Area -->
+          <div class="admin-subview-content">
+            
+            <!-- A. Overview Subview -->
+            <div id="subview-overview" class="admin-subview active">
+              <div class="subview-header">
+                <h2>Dashboard Analytics</h2>
+                <p>Telemetry metrics and local subscriber databases.</p>
+              </div>
+              
+              <div class="admin-stats-grid">
+                <div class="stat-card glass-panel">
+                  <div class="stat-icon purple"><i class="fa-solid fa-scroll"></i></div>
+                  <div class="stat-details">
+                    <span class="stat-lbl">Total Articles</span>
+                    <h3 class="stat-val" id="stat-total-posts">0</h3>
+                  </div>
+                </div>
+                <div class="stat-card glass-panel">
+                  <div class="stat-icon gold"><i class="fa-solid fa-users"></i></div>
+                  <div class="stat-details">
+                    <span class="stat-lbl">Subscribers</span>
+                    <h3 class="stat-val" id="stat-total-subscribers">84</h3>
+                  </div>
+                </div>
+                <div class="stat-card glass-panel">
+                  <div class="stat-icon purple"><i class="fa-solid fa-eye"></i></div>
+                  <div class="stat-details">
+                    <span class="stat-lbl">Total Views</span>
+                    <h3 class="stat-val" id="stat-total-views">2,540</h3>
+                  </div>
+                </div>
+                <div class="stat-card glass-panel">
+                  <div class="stat-icon gold"><i class="fa-solid fa-clock"></i></div>
+                  <div class="stat-details">
+                    <span class="stat-lbl">Drafts</span>
+                    <h3 class="stat-val" id="stat-total-drafts">0</h3>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Quick Tip Card -->
+              <div class="glass-panel quick-tip-panel">
+                <h3><i class="fa-solid fa-lightbulb"></i> Editor Quick Instructions</h3>
+                <p>Welcome, Syed Ameen! To edit or delete pre-existing articles, navigate to the **Manage Articles** panel. To start writing a brand new blog post with custom categories and header images, click **Write New Post** in the panel sidebar. All changes immediately sync with your homepage!</p>
+              </div>
+            </div>
+            
+            <!-- B. Editor Subview -->
+            <div id="subview-editor" class="admin-subview">
+              <div class="subview-header">
+                <h2 id="editor-title-text">Compose Blog Article</h2>
+                <p>Define headers, categories, banner cover graphics, and content parameters.</p>
+              </div>
+              
+              <form id="blog-editor-form" onsubmit="saveBlogPost(event)" class="glass-panel editor-form">
+                <!-- Hidden ID holder for edit modes -->
+                <input type="hidden" id="edit-post-id">
+                
+                <div class="form-row">
+                  <div class="input-group">
+                    <input type="text" id="post-title" required placeholder=" ">
+                    <label for="post-title">Article Title</label>
+                    <span class="focus-border"></span>
+                  </div>
+                  <div class="input-group">
+                    <select id="post-category" class="select-control" required>
+                      <option value="Finance">Finance</option>
+                      <option value="Operations">Operations</option>
+                      <option value="Leadership">Leadership</option>
+                    </select>
+                    <label for="post-category" class="select-label">Category</label>
+                  </div>
+                </div>
+                
+                <div class="input-group">
+                  <input type="url" id="post-banner" placeholder=" ">
+                  <label for="post-banner">Banner Cover Image URL (e.g. Unsplash URL or leave empty for gradient fallback)</label>
+                  <span class="focus-border"></span>
+                </div>
+                
+                <div class="input-group">
+                  <textarea id="post-content" rows="10" required placeholder=" "></textarea>
+                  <label for="post-content">Write Article Content (Supports line breaks for new paragraphs)</label>
+                  <span class="focus-border"></span>
+                </div>
+                
+                <div class="editor-actions">
+                  <div class="status-selection">
+                    <label class="radio-label">
+                      <input type="radio" name="post-status" value="published" checked>
+                      <span>Publish Instantly</span>
+                    </label>
+                    <label class="radio-label">
+                      <input type="radio" name="post-status" value="draft">
+                      <span>Save as Draft</span>
+                    </label>
+                  </div>
+                  
+                  <div class="btn-group">
+                    <button type="button" class="btn btn-secondary" onclick="switchSubview('overview')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-post">Publish Article</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+            
+            <!-- C. Manage Subview -->
+            <div id="subview-manage" class="admin-subview">
+              <div class="subview-header">
+                <h2>Manage Articles</h2>
+                <p>Modify, update draft status, or delete files from the local index.</p>
+              </div>
+              
+              <div class="glass-panel table-panel">
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Category</th>
+                      <th>Created Date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-posts-table-body">
+                    <!-- Dynamic Rows Rendered here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+        
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Global Footer -->
+  <footer id="app-footer">
+    <div class="container footer-container">
+      <p>&copy; 2026 Syed Ameen. All Rights Reserved. Custom deployed at www.ameensyed.in</p>
+      <div class="footer-links">
+        <a href="#home" onclick="navigateTo('home')">Home</a>
+        <a href="#admin-login" onclick="navigateTo('admin-login')">Admin Portal</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- DELETE DIALOG MODAL -->
+  <dialog id="delete-dialog" class="custom-dialog">
+    <div class="dialog-header">
+      <h3><i class="fa-solid fa-triangle-exclamation"></i> Delete Article?</h3>
+    </div>
+    <div class="dialog-body">
+      <p>Are you sure you want to permanently delete this article? This action cannot be undone and will purge the data from local storage.</p>
+      <div class="dialog-target" id="delete-post-title-placeholder">Post Title...</div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-secondary" id="btn-cancel-delete">Cancel</button>
+      <button class="btn btn-primary btn-danger" id="btn-confirm-delete">Delete Permanently</button>
+    </div>
+  </dialog>
+
+  <!-- Script for local DB handlers and client views -->
+  <script src="script.js"></script>
+</body>
+</html>
