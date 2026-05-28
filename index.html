@@ -25,6 +25,10 @@
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
+  <!-- Firebase SDKs (Compat versions for simple drop-in loading) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
   <!-- Custom Stylesheet -->
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -209,6 +213,9 @@
                 <li class="admin-nav-item" data-subview="manage" onclick="switchSubview('manage')">
                   <a href="#manage"><i class="fa-solid fa-list-check"></i> Manage Articles</a>
                 </li>
+                <li class="admin-nav-item" data-subview="cloud" onclick="switchSubview('cloud')">
+                  <a href="#cloud"><i class="fa-solid fa-cloud-arrow-up"></i> Cloud Sync Settings</a>
+                </li>
               </ul>
             </nav>
             
@@ -346,6 +353,42 @@
                     <!-- Dynamic Rows Rendered here -->
                   </tbody>
                 </table>
+              </div>
+            </div>
+            
+            <!-- D. Cloud Sync Subview -->
+            <div id="subview-cloud" class="admin-subview">
+              <div class="subview-header">
+                <h2>Cloud Database Integration</h2>
+                <p>Manage real-time cloud data sync and connection parameters.</p>
+              </div>
+              
+              <div class="glass-panel cloud-settings-panel">
+                <div class="cloud-status-box">
+                  <div class="status-indicator">
+                    <span class="status-dot offline" id="cloud-status-dot"></span>
+                    <span class="status-lbl" id="cloud-status-text">Offline Local Mode (Active)</span>
+                  </div>
+                  <p class="status-desc" id="cloud-status-desc">All blog posts are currently saved in your browser's local cache. Add your Firebase configurations below to upgrade to cloud sync.</p>
+                </div>
+                
+                <form id="cloud-config-form" onsubmit="saveCloudConfig(event)" class="cloud-form">
+                  <div class="input-group">
+                    <textarea id="cloud-firebase-config" rows="6" required placeholder=" "></textarea>
+                    <label for="cloud-firebase-config">Paste Firebase Config Object (JavaScript or JSON)</label>
+                    <span class="focus-border"></span>
+                  </div>
+                  
+                  <div class="cloud-tip">
+                    <strong>💡 Setup Tip:</strong>
+                    <span>Go to console.firebase.google.com, create a web app, and copy the <code>firebaseConfig</code> code block. Paste either the full script or just the JSON configuration here!</span>
+                  </div>
+                  
+                  <div class="cloud-actions">
+                    <button type="button" class="btn btn-secondary" onclick="resetCloudConfig()">Disable &amp; Reset to Local Mode</button>
+                    <button type="submit" class="btn btn-primary">Enable Cloud Sync</button>
+                  </div>
+                </form>
               </div>
             </div>
             

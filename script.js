@@ -32,11 +32,80 @@ const DEFAULT_POSTS = [
 
 document.addEventListener('DOMContentLoaded', () => {
   
+  // Initialize Cloud Sync state
+  let isCloudSyncActive = false;
+  let firestore = null;
+  const firebaseConfigStr = localStorage.getItem('firebase-config');
+
+  if (firebaseConfigStr) {
+    try {
+      const config = JSON.parse(firebaseConfigStr);
+      // Initialize Firebase if the compat script SDK is loaded
+      if (typeof firebase !== 'undefined') {
+        if (firebase.apps.length === 0) {
+          firebase.initializeApp(config);
+        }
+        firestore = firebase.firestore();
+        isCloudSyncActive = true;
+        console.log("✔ Cloud Sync Engine successfully initialized.");
+      } else {
+        console.warn("Firebase SDK script not loaded. Running in local fallback mode.");
+      }
+    } catch (e) {
+      console.error("Failed to initialize Firebase from cached config:", e);
+    }
+  }
+
   // Initialize local database
   let db = JSON.parse(localStorage.getItem('blog-database'));
   if (!db || db.length === 0) {
     db = DEFAULT_POSTS;
     localStorage.setItem('blog-database', JSON.stringify(db));
+  }
+
+  // Set up real-time Firestore database sync if active
+  if (isCloudSyncActive && firestore) {
+    firestore.collection('blogs').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
+      const posts = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        posts.push({
+          id: doc.id,
+          title: data.title,
+          category: data.category,
+          date: data.date,
+          readTime: data.readTime,
+          banner: data.banner,
+          summary: data.summary,
+          content: data.content,
+          status: data.status,
+          timestamp: data.timestamp
+        });
+      });
+      
+      // Update local storage and cache variables
+      localStorage.setItem('blog-database', JSON.stringify(posts));
+      db = posts;
+      
+      // Silent dynamic UI refresh depending on active workspace view
+      const activePanel = document.querySelector('.view-panel.active');
+      if (activePanel) {
+        if (activePanel.id === 'view-home') {
+          renderBlogs();
+        } else if (activePanel.id === 'view-admin-console') {
+          const activeSubview = document.querySelector('.admin-subview.active');
+          if (activeSubview) {
+            if (activeSubview.id === 'subview-overview') {
+              renderAdminDashboard();
+            } else if (activeSubview.id === 'subview-manage') {
+              renderAdminTable();
+            }
+          }
+        }
+      }
+    }, error => {
+      console.error("Firestore real-time sync failure:", error);
+    });
   }
 
   // Active Category State
@@ -355,6 +424,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAdminDashboard();
     } else if (subviewId === 'manage') {
       renderAdminTable();
+    } else if (subviewId === 'cloud') {
+      renderCloudSettingsPanel();
     } else if (subviewId === 'editor') {
       // Check if editor form contains pre-populated ID (edit mode)
       const editId = document.getElementById('edit-post-id').value;
@@ -364,6 +435,76 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('editor-title-text').textContent = 'Compose Blog Article';
         document.getElementById('btn-save-post').textContent = 'Publish Article';
       }
+    }
+  };
+
+  // Renders state and indicators inside Cloud Settings UI
+  function renderCloudSettingsPanel() {
+    const statusDot = document.getElementById('cloud-status-dot');
+    const statusText = document.getElementById('cloud-status-text');
+    const statusDesc = document.getElementById('cloud-status-desc');
+    const configTextArea = document.getElementById('cloud-firebase-config');
+    const statusBox = document.querySelector('.cloud-status-box');
+
+    if (isCloudSyncActive) {
+      if (statusDot) statusDot.className = 'status-dot online';
+      if (statusText) statusText.textContent = 'Cloud Sync Active (Connected to Google Firestore)';
+      if (statusDesc) statusDesc.textContent = 'Your blog is securely linked to Google Cloud. All changes will instantly sync across all browsers and devices in real-time!';
+      if (statusBox) statusBox.classList.add('active');
+      
+      const savedConfig = localStorage.getItem('firebase-config');
+      if (configTextArea && savedConfig) {
+        configTextArea.value = JSON.stringify(JSON.parse(savedConfig), null, 2);
+      }
+    } else {
+      if (statusDot) statusDot.className = 'status-dot offline';
+      if (statusText) statusText.textContent = 'Offline Local Mode (Active)';
+      if (statusDesc) statusDesc.textContent = "All blog posts are currently saved in your browser's local cache. Add your Firebase configurations below to upgrade to cloud sync.";
+      if (statusBox) statusBox.classList.remove('active');
+    }
+  }
+
+  // Save Config and initialize cloud connection
+  window.saveCloudConfig = function(e) {
+    e.preventDefault();
+    const configTextArea = document.getElementById('cloud-firebase-config');
+    if (!configTextArea) return;
+    
+    const configStr = configTextArea.value.trim();
+    let configObj = null;
+    
+    try {
+      configObj = JSON.parse(configStr);
+    } catch (err1) {
+      const regex = /\{[\s\S]*?\}/;
+      const match = configStr.match(regex);
+      if (match) {
+        try {
+          let jsonStr = match[0]
+            .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
+            .replace(/'([^']*)'/g, '"$1"')
+            .replace(/,\s*([\}\]])/g, '$1');
+          configObj = JSON.parse(jsonStr);
+        } catch (err2) {
+          console.error("Failed to extract JavaScript object formatting:", err2);
+        }
+      }
+    }
+    
+    if (configObj && configObj.apiKey && configObj.projectId) {
+      localStorage.setItem('firebase-config', JSON.stringify(configObj));
+      alert("✔ Cloud Sync enabled successfully! Re-initializing your database portal...");
+      window.location.reload();
+    } else {
+      alert("❌ Failed to parse config. Please make sure you paste the complete valid Firebase configuration object containing apiKey and projectId!");
+    }
+  };
+
+  // Revert back to Offline Local Storage mode
+  window.resetCloudConfig = function() {
+    if (confirm("Are you sure you want to disable Cloud Sync? This will return your database to local offline mode. (Your local cache will remain intact).")) {
+      localStorage.removeItem('firebase-config');
+      window.location.reload();
     }
   };
 
@@ -441,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
     
-    // Estimate reading time (roughly 200 words per minute)
+    // Estimate reading time
     const wordCount = content.split(/\s+/).length;
     const readMinutes = Math.max(1, Math.round(wordCount / 200));
     const readTimeStr = `${readMinutes} min read`;
@@ -449,6 +590,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Date String Formatting
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     const todayStr = new Date().toLocaleDateString('en-US', options);
+
+    let finalPostId = editId;
+    let postObj = null;
 
     if (editId) {
       // 1. UPDATE MODE
@@ -460,13 +604,15 @@ document.addEventListener('DOMContentLoaded', () => {
         allPosts[postIdx].content = content;
         allPosts[postIdx].status = status;
         allPosts[postIdx].readTime = readTimeStr;
-        // Keep original date if desired, or update to current modified date
         allPosts[postIdx].date = todayStr;
+        
+        postObj = allPosts[postIdx];
       }
     } else {
       // 2. CREATE MODE
-      const newPost = {
-        id: `post-${Date.now()}`,
+      finalPostId = `post-${Date.now()}`;
+      postObj = {
+        id: finalPostId,
         title: title,
         category: category,
         banner: banner,
@@ -474,13 +620,35 @@ document.addEventListener('DOMContentLoaded', () => {
         status: status,
         date: todayStr,
         readTime: readTimeStr,
-        summary: content.substring(0, 140) + '...'
+        summary: content.substring(0, 140) + '...',
+        timestamp: Date.now()
       };
-      allPosts.unshift(newPost);
+      allPosts.unshift(postObj);
     }
 
-    // Save updated index, refresh, and switch subviews
+    // Save updated index locally
     localStorage.setItem('blog-database', JSON.stringify(allPosts));
+    db = allPosts;
+    
+    // Sync to Firestore asynchronously if Cloud Sync is active
+    if (isCloudSyncActive && firestore && postObj) {
+      firestore.collection('blogs').doc(finalPostId).set({
+        title: postObj.title,
+        category: postObj.category,
+        banner: postObj.banner,
+        content: postObj.content,
+        status: postObj.status,
+        date: postObj.date,
+        readTime: postObj.readTime,
+        summary: postObj.summary,
+        timestamp: postObj.timestamp || Date.now()
+      }).then(() => {
+        console.log("✔ Successfully synchronized post to Google Cloud Firestore.");
+      }).catch(err => {
+        console.error("Firestore write failure:", err);
+      });
+    }
+
     editorForm.reset();
     document.getElementById('edit-post-id').value = '';
     
@@ -542,6 +710,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const updatedPosts = allPosts.filter(p => p.id !== pendingDeleteId);
       
       localStorage.setItem('blog-database', JSON.stringify(updatedPosts));
+      db = updatedPosts;
+      
+      // Delete from Firestore if Cloud Sync is active
+      if (isCloudSyncActive && firestore) {
+        firestore.collection('blogs').doc(pendingDeleteId).delete().then(() => {
+          console.log("✔ Successfully deleted post from Google Cloud Firestore.");
+        }).catch(err => {
+          console.error("Firestore delete failure:", err);
+        });
+      }
       
       if (deleteDialog) deleteDialog.close();
       pendingDeleteId = null;

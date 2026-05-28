@@ -1332,6 +1332,106 @@ body.light-theme .input-group input, body.light-theme .input-group textarea, bod
 }
 
 /* ==========================================================================
+   CLOUD SYNC SETTINGS PANEL
+   ========================================================================== */
+.cloud-settings-panel {
+  padding: 30px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius-md);
+  margin-top: 20px;
+}
+
+.cloud-status-box {
+  background-color: var(--accent-purple-glow);
+  border: 1px solid rgba(147, 51, 234, 0.15);
+  border-radius: var(--border-radius-sm);
+  padding: 20px 25px;
+  margin-bottom: 30px;
+  transition: all var(--transition-medium);
+}
+
+.cloud-status-box.active {
+  background-color: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: hsl(220, 10%, 40%);
+  display: inline-block;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+  transition: background-color var(--transition-medium), box-shadow var(--transition-medium);
+}
+
+.status-dot.offline {
+  background-color: hsl(220, 10%, 50%);
+  box-shadow: 0 0 10px rgba(100, 116, 139, 0.3);
+}
+
+.status-dot.online {
+  background-color: hsl(140, 75%, 50%);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.65);
+}
+
+.status-lbl {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+}
+
+.status-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.cloud-tip {
+  background-color: var(--accent-gold-glow);
+  border-left: 4px solid var(--accent-gold);
+  border-radius: 0 var(--border-radius-sm) var(--border-radius-sm) 0;
+  padding: 15px 20px;
+  margin-bottom: 30px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.cloud-tip strong {
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.cloud-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+  .cloud-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .cloud-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ==========================================================================
    RESPONSIVE DESIGN (MEDIA BREAKPOINTS)
    ========================================================================== */
 
