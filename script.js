@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userVal = document.getElementById('login-username').value.trim().toLowerCase();
     const passVal = document.getElementById('login-password').value.trim();
 
-    if (userVal === 'admin' && passVal === 'admin') {
+    if (userVal === 'admin' && passVal === '15112025') {
       // Save session authorization
       sessionStorage.setItem('admin-authorized', 'true');
       loginStatus.style.display = 'none';
