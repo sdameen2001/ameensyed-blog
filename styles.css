@@ -173,7 +173,7 @@ h1, h2, h3, h4 {
 /* ==========================================================================
    NAVIGATION BAR
    ========================================================================== */
-header {
+#app-header {
   position: fixed;
   top: 0;
   left: 0;
@@ -187,7 +187,7 @@ header {
   transition: background-color var(--transition-medium);
 }
 
-body.light-theme header {
+body.light-theme #app-header {
   background-color: rgba(240, 243, 248, 0.85);
 }
 
