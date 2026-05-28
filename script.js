@@ -129,13 +129,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // ==========================================================================
-  // 3. Render Public Blog Grid
+  // 3. Render Public Blog Grid & Dynamic Categories
   // ==========================================================================
   const blogsGrid = document.getElementById('blogs-grid-container');
+
+  function renderCategoryFilters() {
+    const container = document.querySelector('.category-selectors');
+    if (!container) return;
+
+    const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
+    const publishedPosts = allPosts.filter(p => p.status === 'published');
+
+    // Pre-populate with standard options to ensure they always exist
+    const categories = new Set(['Finance', 'Operations', 'Leadership']);
+    
+    // Scan database for any custom categories typed by the user
+    publishedPosts.forEach(post => {
+      if (post.category && post.category.trim() !== '') {
+        categories.add(post.category.trim());
+      }
+    });
+
+    let html = `<button class="cat-btn ${activeCategory === 'all' ? 'active' : ''}" data-category="all" onclick="filterCategory('all')">All Articles</button>`;
+
+    categories.forEach(cat => {
+      let icon = 'fa-solid fa-tags'; // Default icon for typed custom categories
+      const lowerCat = cat.toLowerCase();
+      if (lowerCat === 'finance') icon = 'fa-solid fa-chart-line';
+      else if (lowerCat === 'operations') icon = 'fa-solid fa-gears';
+      else if (lowerCat === 'leadership') icon = 'fa-solid fa-users';
+
+      html += `
+        <button class="cat-btn ${activeCategory === cat ? 'active' : ''}" data-category="${cat}" onclick="filterCategory('${cat}')">
+          <i class="${icon}"></i> ${cat}
+        </button>
+      `;
+    });
+
+    container.innerHTML = html;
+  }
 
   function renderBlogs(filteredPosts = null) {
     if (!blogsGrid) return;
     blogsGrid.innerHTML = '';
+
+    // Rebuild category selector pills dynamically from current posts
+    renderCategoryFilters();
 
     // If no filtered dataset provided, read all published entries from local db
     let posts = filteredPosts;
@@ -251,16 +290,6 @@ document.addEventListener('DOMContentLoaded', () => {
   window.filterCategory = function(category) {
     activeCategory = category;
     
-    // Toggle active classes on category buttons
-    const catButtons = document.querySelectorAll('.cat-btn');
-    catButtons.forEach(btn => {
-      if (btn.getAttribute('data-category') === category) {
-        btn.classList.add('active');
-      } else {
-        btn.classList.remove('active');
-      }
-    });
-
     // Reset search bar value on category switch to prevent overrides
     const searchBar = document.getElementById('blog-search');
     if (searchBar) searchBar.value = '';

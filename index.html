@@ -285,13 +285,14 @@
                     <span class="focus-border"></span>
                   </div>
                   <div class="input-group">
-                    <select id="post-category" class="select-control" required>
-                      <option value="Finance">Finance</option>
-                      <option value="Operations">Operations</option>
-                      <option value="Leadership">Leadership</option>
-                      <option value="Others">Others</option>
-                    </select>
-                    <label for="post-category" class="select-label">Category</label>
+                    <input type="text" id="post-category" required placeholder=" " list="category-datalist">
+                    <label for="post-category">Category</label>
+                    <span class="focus-border"></span>
+                    <datalist id="category-datalist">
+                      <option value="Finance"></option>
+                      <option value="Operations"></option>
+                      <option value="Leadership"></option>
+                    </datalist>
                   </div>
                 </div>
                 
