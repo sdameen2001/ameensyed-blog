@@ -572,6 +572,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Render initial blogs on boot load
-  navigateTo('home');
+  // Secret Hotkey: Ctrl + Shift + A to navigate to Admin Portal
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      navigateTo('admin-login');
+    }
+  });
+
+  // Render initial blogs or route to admin if secret hash is provided
+  const currentHash = window.location.hash;
+  if (currentHash === '#admin' || currentHash === '#admin-login') {
+    navigateTo('admin-login');
+  } else {
+    navigateTo('home');
+  }
 });
