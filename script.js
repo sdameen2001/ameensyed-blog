@@ -243,6 +243,43 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error("Firestore subscribers sync failure:", error);
     });
 
+    // 3. comments collection listener
+    firestore.collection('comments').onSnapshot(snapshot => {
+      const comms = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        comms.push({
+          id: doc.id,
+          postId: data.postId || '',
+          name: data.name || '',
+          content: data.content || '',
+          timestamp: data.timestamp || Date.now(),
+          status: data.status || 'pending'
+        });
+      });
+      localStorage.setItem('blog-comments', JSON.stringify(comms));
+      
+      const activePanel = document.querySelector('.view-panel.active');
+      if (activePanel) {
+        if (activePanel.id === 'view-admin-console') {
+          const activeSubview = document.querySelector('.admin-subview.active');
+          if (activeSubview) {
+            if (activeSubview.id === 'subview-overview') {
+              renderAdminDashboard();
+            } else if (activeSubview.id === 'subview-comments') {
+              renderAdminComments();
+            }
+          }
+        } else if (activePanel.id === 'view-post-detail') {
+          if (activePostId) {
+            renderApprovedComments(activePostId);
+          }
+        }
+      }
+    }, error => {
+      console.error("Firestore comments sync failure:", error);
+    });
+
     // 3. analytics/site document listener
     firestore.collection('analytics').doc('site').onSnapshot(doc => {
       if (doc.exists) {
@@ -529,6 +566,9 @@ document.addEventListener('DOMContentLoaded', () => {
       readerContentBody.innerHTML = formattedContent;
     }
 
+    // Load comments for this post
+    renderApprovedComments(postId);
+
     navigateTo('post-detail');
   };
 
@@ -626,6 +666,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renderCloudSettingsPanel();
     } else if (subviewId === 'subscribers') {
       renderAdminSubscribers();
+    } else if (subviewId === 'comments') {
+      renderAdminComments();
     } else if (subviewId === 'editor') {
       // Check if editor form contains pre-populated ID (edit mode)
       const editId = document.getElementById('edit-post-id').value;
@@ -716,11 +758,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const statTotalDrafts = document.getElementById('stat-total-drafts');
   const statTotalSubscribers = document.getElementById('stat-total-subscribers');
   const statTotalViews = document.getElementById('stat-total-views');
+  const statTotalComments = document.getElementById('stat-total-comments');
 
   function renderAdminDashboard() {
     const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
     const localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
     const localSiteViews = parseInt(localStorage.getItem('site-views')) || 0;
+    const localComments = JSON.parse(localStorage.getItem('blog-comments')) || [];
     
     if (statTotalPosts) {
       const publishedCount = allPosts.filter(p => p.status === 'published').length;
@@ -735,6 +779,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (statTotalViews) {
       statTotalViews.textContent = localSiteViews.toLocaleString();
+    }
+    if (statTotalComments) {
+      const pendingCount = localComments.filter(c => c.status === 'pending').length;
+      if (pendingCount > 0) {
+        statTotalComments.innerHTML = `${localComments.length} <span style="font-size:0.78rem; color:var(--accent-gold); font-weight:700;">(${pendingCount} pending)</span>`;
+      } else {
+        statTotalComments.textContent = localComments.length;
+      }
     }
   }
 
@@ -1453,6 +1505,240 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       document.body.removeChild(input);
     });
+  };
+
+  // ==========================================================================
+  // 13. Comments Thread Submission & Moderation Controllers
+  // ==========================================================================
+  window.handleCommentSubmit = function(event) {
+    event.preventDefault();
+    const authorInput = document.getElementById('comment-author-name');
+    const contentInput = document.getElementById('comment-text');
+    const statusDiv = document.getElementById('comment-status');
+    
+    if (!authorInput || !contentInput) return;
+    
+    const name = authorInput.value.trim();
+    const content = contentInput.value.trim();
+    
+    if (!name || !content) return;
+    
+    const newComment = {
+      id: 'comment-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      postId: activePostId,
+      name: name,
+      content: content,
+      timestamp: Date.now(),
+      status: 'pending'
+    };
+    
+    // Save locally
+    const localComments = JSON.parse(localStorage.getItem('blog-comments')) || [];
+    localComments.push(newComment);
+    localStorage.setItem('blog-comments', JSON.stringify(localComments));
+    
+    // Save to Firestore if active
+    if (isCloudSyncActive && firestore) {
+      firestore.collection('comments').doc(newComment.id).set({
+        postId: newComment.postId,
+        name: newComment.name,
+        content: newComment.content,
+        timestamp: newComment.timestamp,
+        status: newComment.status
+      }).then(() => {
+        console.log("✔ Comment synced to Cloud Firestore.");
+      }).catch(err => {
+        console.error("Firestore comment submission failure:", err);
+      });
+    }
+    
+    // UI Feedback
+    if (statusDiv) {
+      statusDiv.className = 'comment-status-msg success';
+      statusDiv.innerHTML = `<i class="fa-solid fa-circle-check"></i> Thank you! Your comment is awaiting administrator moderation.`;
+      
+      // Clear status after 5 seconds
+      setTimeout(() => {
+        statusDiv.style.opacity = '0';
+        setTimeout(() => {
+          statusDiv.innerHTML = '';
+          statusDiv.className = 'newsletter-status';
+          statusDiv.style.opacity = '1';
+        }, 300);
+      }, 5000);
+    }
+    
+    // Show a beautiful Toast
+    showToast("✔ Comment submitted! Awaiting administrator moderation.");
+    
+    // Reset Form
+    document.getElementById('comment-submit-form').reset();
+  };
+
+  window.renderApprovedComments = function(postId) {
+    const listContainer = document.getElementById('comments-list-container');
+    const countSpan = document.getElementById('comments-count');
+    if (!listContainer) return;
+    
+    listContainer.innerHTML = '';
+    
+    const localComments = JSON.parse(localStorage.getItem('blog-comments')) || [];
+    const approvedComments = localComments
+      .filter(c => c.postId === postId && c.status === 'approved')
+      .sort((a, b) => a.timestamp - b.timestamp); // Chronological: oldest first
+      
+    if (countSpan) {
+      countSpan.textContent = approvedComments.length;
+    }
+    
+    if (approvedComments.length === 0) {
+      listContainer.innerHTML = `
+        <p style="color: var(--text-muted); font-size: 0.95rem; font-style: italic; text-align: center; padding: 20px 0;">
+          No comments yet. Be the first to share your thoughts!
+        </p>
+      `;
+      return;
+    }
+    
+    approvedComments.forEach(comment => {
+      // Generate initials for avatar
+      const nameParts = comment.name.split(' ');
+      const initials = nameParts.map(p => p.charAt(0).toUpperCase()).slice(0, 2).join('');
+      
+      const formattedTime = new Date(comment.timestamp).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      const card = document.createElement('div');
+      card.className = 'comment-card';
+      card.innerHTML = `
+        <div class="comment-avatar">${initials}</div>
+        <div style="flex-grow: 1;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 5px;">
+            <h5 class="comment-author-name">${comment.name}</h5>
+            <span class="comment-date">${formattedTime}</span>
+          </div>
+          <p class="comment-content">${comment.content}</p>
+        </div>
+      `;
+      listContainer.appendChild(card);
+    });
+  };
+
+  window.renderAdminComments = function() {
+    const tableBody = document.getElementById('admin-comments-table-body');
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    const localComments = JSON.parse(localStorage.getItem('blog-comments')) || [];
+    const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
+    
+    // Sort comments by timestamp descending (newest first)
+    const sortedComments = [...localComments].sort((a, b) => b.timestamp - a.timestamp);
+    
+    if (sortedComments.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 40px 20px;">
+            <i class="fa-solid fa-comments" style="font-size: 2.5rem; color: var(--accent-purple-glow); display: block; margin-bottom: 12px;"></i>
+            No comments submitted yet.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    sortedComments.forEach(comment => {
+      // Find associated post title
+      const post = allPosts.find(p => p.id === comment.postId);
+      const postTitle = post ? post.title : `Deleted Article (${comment.postId})`;
+      
+      const formattedTime = new Date(comment.timestamp).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      const statusBadge = comment.status === 'approved' 
+        ? `<span class="badge-status pub"><i class="fa-solid fa-circle-check"></i> Approved</span>`
+        : `<span class="badge-status draft"><i class="fa-solid fa-clock"></i> Pending</span>`;
+        
+      const approveBtn = comment.status === 'pending'
+        ? `<button class="action-icon-btn approve" onclick="approveComment('${comment.id}')" title="Approve Comment"><i class="fa-solid fa-check"></i></button>`
+        : '';
+        
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td style="font-weight: 600; color: var(--text-primary); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${postTitle}">${postTitle}</td>
+        <td style="font-weight: 600; color: var(--text-primary);">${comment.name}</td>
+        <td>
+          <div style="max-width: 250px; max-height: 80px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;" title="${comment.content}">${comment.content}</div>
+        </td>
+        <td style="font-size: 0.8rem; white-space: nowrap;">${formattedTime}</td>
+        <td>${statusBadge}</td>
+        <td>
+          <div style="display: flex; gap: 8px;">
+            ${approveBtn}
+            <button class="action-icon-btn delete" onclick="deleteComment('${comment.id}')" title="Delete Comment"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </td>
+      `;
+      tableBody.appendChild(row);
+    });
+  };
+
+  window.approveComment = function(commentId) {
+    const localComments = JSON.parse(localStorage.getItem('blog-comments')) || [];
+    const comment = localComments.find(c => c.id === commentId);
+    
+    if (!comment) return;
+    
+    comment.status = 'approved';
+    localStorage.setItem('blog-comments', JSON.stringify(localComments));
+    
+    // Update in Firestore if active
+    if (isCloudSyncActive && firestore) {
+      firestore.collection('comments').doc(commentId).update({
+        status: 'approved'
+      }).then(() => {
+        console.log(`✔ Comment ${commentId} approved in Cloud Database.`);
+      }).catch(err => {
+        console.error("Firestore comment approve failure:", err);
+      });
+    }
+    
+    showToast("✔ Comment has been approved and is now public!");
+    renderAdminComments();
+    renderAdminDashboard();
+  };
+
+  window.deleteComment = function(commentId) {
+    if (confirm("Are you sure you want to permanently delete this comment? This action cannot be undone.")) {
+      const localComments = JSON.parse(localStorage.getItem('blog-comments')) || [];
+      const updatedComments = localComments.filter(c => c.id !== commentId);
+      
+      localStorage.setItem('blog-comments', JSON.stringify(updatedComments));
+      
+      // Delete in Firestore if active
+      if (isCloudSyncActive && firestore) {
+        firestore.collection('comments').doc(commentId).delete().then(() => {
+          console.log(`✔ Comment ${commentId} deleted from Cloud Database.`);
+        }).catch(err => {
+          console.error("Firestore comment delete failure:", err);
+        });
+      }
+      
+      showToast("✔ Comment has been permanently deleted.");
+      renderAdminComments();
+      renderAdminDashboard();
+    }
   };
 
   // Render initial blogs or route to admin / deep-linked posts if hash is provided

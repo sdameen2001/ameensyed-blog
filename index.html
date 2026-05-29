@@ -172,6 +172,31 @@
             </div>
           </footer>
         </article>
+
+        <!-- Comments Section -->
+        <div class="comments-container glass-panel scroll-reveal" style="margin-top: 30px; padding: 35px; border-radius: 16px;">
+          <h3 style="font-family: var(--font-heading); margin-bottom: 25px; color: var(--text-primary); display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-comments" style="color: var(--accent-gold);"></i> Discussion (<span id="comments-count">0</span>)
+          </h3>
+          
+          <!-- Comments List -->
+          <div id="comments-list-container" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 30px;">
+            <!-- Dynamically populated -->
+          </div>
+          
+          <!-- Leave a Comment Form -->
+          <div class="add-comment-box" style="border-top: 1px solid var(--glass-border); padding-top: 25px;">
+            <h4 style="font-family: var(--font-heading); margin-bottom: 15px; color: var(--text-primary);">Leave a Comment</h4>
+            <form id="comment-submit-form" onsubmit="handleCommentSubmit(event)" style="display: flex; flex-direction: column; gap: 15px; max-width: 600px;">
+              <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                <input type="text" id="comment-author-name" class="newsletter-input" placeholder="Your Name" required>
+              </div>
+              <textarea id="comment-text" class="newsletter-input" rows="4" placeholder="Share your thoughts or questions about this article..." required style="resize: vertical;"></textarea>
+              <button type="submit" class="btn btn-primary" style="align-self: flex-start; margin: 0; padding: 10px 24px; border-radius: 8px; font-weight: 600;">Post Comment</button>
+            </form>
+            <div id="comment-status" class="newsletter-status" style="margin-top: 10px; font-size: 0.85rem; font-weight: 600;"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -237,6 +262,9 @@
                 <li class="admin-nav-item" data-subview="subscribers" onclick="switchSubview('subscribers')">
                   <a href="#subscribers"><i class="fa-solid fa-users"></i> Subscribers List</a>
                 </li>
+                <li class="admin-nav-item" data-subview="comments" onclick="switchSubview('comments')">
+                  <a href="#comments"><i class="fa-solid fa-comments"></i> Moderate Comments</a>
+                </li>
               </ul>
             </nav>
             
@@ -280,6 +308,13 @@
                   <div class="stat-details">
                     <span class="stat-lbl">Drafts</span>
                     <h3 class="stat-val" id="stat-total-drafts">0</h3>
+                  </div>
+                </div>
+                <div class="stat-card glass-panel">
+                  <div class="stat-icon purple"><i class="fa-solid fa-comments"></i></div>
+                  <div class="stat-details">
+                    <span class="stat-lbl">Comments</span>
+                    <h3 class="stat-val" id="stat-total-comments">0</h3>
                   </div>
                 </div>
               </div>
@@ -490,6 +525,33 @@
                     </tbody>
                   </table>
                 </div>
+            </div>
+
+            <!-- F. Comments Moderation subview -->
+            <div id="subview-comments" class="admin-subview">
+              <div class="subview-header">
+                <h2>Moderate Comments</h2>
+                <p>Approve, reject, or permanently delete visitor comments for your published articles.</p>
+              </div>
+              
+              <div class="glass-panel" style="padding: 20px;">
+                <div class="admin-table-box" style="margin-top: 0; max-height: 500px; overflow-y: auto;">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Article</th>
+                        <th>Author</th>
+                        <th>Comment</th>
+                        <th>Date &amp; Time</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="admin-comments-table-body">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
             
@@ -564,6 +626,6 @@
   </dialog>
 
   <!-- Script for local DB handlers and client views -->
-  <script src="script.js?v=19"></script>
+  <script src="script.js?v=20"></script>
 </body>
 </html>
