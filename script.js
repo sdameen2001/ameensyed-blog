@@ -600,6 +600,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     const todayStr = new Date().toLocaleDateString('en-US', options);
 
+    // Generate clean plain-text summary (stripping HTML tags to prevent markup breakage on homepage)
+    const cleanSummaryText = content.replace(/<\/?[^>]+(>|$)/g, "");
+    const generatedSummary = cleanSummaryText.substring(0, 140) + (cleanSummaryText.length > 140 ? '...' : '');
+
     let finalPostId = editId;
     let postObj = null;
 
@@ -614,6 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allPosts[postIdx].status = status;
         allPosts[postIdx].readTime = readTimeStr;
         allPosts[postIdx].date = todayStr;
+        allPosts[postIdx].summary = generatedSummary;
         
         postObj = allPosts[postIdx];
       }
@@ -629,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         status: status,
         date: todayStr,
         readTime: readTimeStr,
-        summary: content.substring(0, 140) + '...',
+        summary: generatedSummary,
         timestamp: Date.now()
       };
       allPosts.unshift(postObj);
@@ -766,6 +771,35 @@ document.addEventListener('DOMContentLoaded', () => {
       navigateTo('admin-login');
     }
   });
+
+  // ==========================================================================
+  // 11. Visual Textarea Formatting Helpers
+  // ==========================================================================
+  window.insertFormat = function(tagOpen, tagClose = '') {
+    const textarea = document.getElementById('post-content');
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+    
+    const replacement = tagOpen + (selectedText || '') + tagClose;
+    textarea.value = text.substring(0, start) + replacement + text.substring(end);
+    
+    // Focus back on the textarea
+    textarea.focus();
+    // Re-select selection
+    const newPos = start + tagOpen.length + (selectedText ? selectedText.length : 0);
+    textarea.setSelectionRange(newPos, newPos);
+  };
+
+  window.insertLink = function() {
+    const url = prompt("Enter the URL destination:");
+    if (url) {
+      insertFormat(`<a href="${url}" target="_blank" class="blog-link">`, '</a>');
+    }
+  };
 
   // Render initial blogs or route to admin if secret hash is provided
   const currentHash = window.location.hash;

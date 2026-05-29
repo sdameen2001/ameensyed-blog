@@ -1420,6 +1420,74 @@ body.light-theme .input-group input, body.light-theme .input-group textarea, bod
   margin-top: 10px;
 }
 
+/* ==========================================================================
+   VISUAL EDITOR TOOLBAR STYLES
+   ========================================================================== */
+.editor-content-group {
+  margin-bottom: 25px;
+}
+
+.static-label {
+  display: block;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent-purple);
+  margin-bottom: 8px;
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  border-bottom: none;
+  border-top-left-radius: var(--border-radius-sm);
+  border-top-right-radius: var(--border-radius-sm);
+  margin-bottom: 0;
+  backdrop-filter: blur(10px);
+}
+
+body.light-theme .editor-toolbar {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.editor-toolbar .tool-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.editor-toolbar .tool-btn:hover {
+  background-color: var(--glass-border);
+  color: var(--text-primary);
+}
+
+.editor-toolbar .tool-separator {
+  color: var(--glass-border);
+  margin: 0 6px;
+  user-select: none;
+}
+
+.editor-textarea-with-toolbar {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  resize: vertical;
+}
+
 @media (max-width: 768px) {
   .cloud-actions {
     flex-direction: column-reverse;
