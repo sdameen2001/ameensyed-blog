@@ -36,6 +36,74 @@ document.addEventListener('DOMContentLoaded', () => {
   let isCloudSyncActive = false;
   let firestore = null;
   let postReaderSource = 'home';
+  let activePostId = '';
+
+  function showToast(message) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toast-container';
+      container.style.cssText = `
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        pointer-events: none;
+      `;
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #f8fafc;
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 500;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3), 0 0 20px rgba(99, 102, 241, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: auto;
+    `;
+    
+    toast.innerHTML = `
+      <span style="color: #818cf8; font-size: 1.1rem;"><i class="fa-solid fa-circle-check"></i></span>
+      <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    // Trigger reflow to animate
+    toast.offsetHeight;
+
+    // Animate in
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0) scale(1)';
+
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-20px) scale(0.95)';
+      setTimeout(() => {
+        toast.remove();
+        if (container.children.length === 0) {
+          container.remove();
+        }
+      }, 300);
+    }, 3000);
+  }
   
   // Default embedded Firebase configuration for all public readers & devices
   const embeddedConfig = {
@@ -321,6 +389,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.loadPostReader = function(postId, source = 'home') {
     postReaderSource = source;
+    activePostId = postId;
+    
+    // Dynamically update hash URL for deep-linking
+    window.location.hash = postId;
+
     const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
     const post = allPosts.find(p => p.id === postId);
     if (!post) return;
@@ -826,6 +899,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.handleReaderBack = function() {
+    // Clear hash deep-linking on return
+    window.location.hash = '';
+
     if (postReaderSource === 'admin') {
       window.navigateTo('admin-console');
       switchSubview('manage');
@@ -838,10 +914,48 @@ document.addEventListener('DOMContentLoaded', () => {
     window.print();
   };
 
-  // Render initial blogs or route to admin if secret hash is provided
+  window.shareToWhatsApp = function() {
+    const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
+    const post = allPosts.find(p => p.id === activePostId);
+    if (!post) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname}#${activePostId}`;
+    const text = encodeURIComponent(`Check out this insightful article by Syed Ameen: "${post.title}"\nRead here: ${shareUrl}`);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+  };
+
+  window.shareToLinkedIn = function() {
+    const shareUrl = `${window.location.origin}${window.location.pathname}#${activePostId}`;
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank');
+  };
+
+  window.copyArticleLink = function() {
+    const shareUrl = `${window.location.origin}${window.location.pathname}#${activePostId}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      showToast("Article link copied to clipboard!");
+    }).catch(err => {
+      console.error("Link copy failure:", err);
+      // Fallback
+      const input = document.createElement('input');
+      input.value = shareUrl;
+      document.body.appendChild(input);
+      input.select();
+      try {
+        document.execCommand('copy');
+        showToast("Article link copied to clipboard!");
+      } catch (e) {
+        alert("Failed to copy link automatically. Please copy it from here: " + shareUrl);
+      }
+      document.body.removeChild(input);
+    });
+  };
+
+  // Render initial blogs or route to admin / deep-linked posts if hash is provided
   const currentHash = window.location.hash;
   if (currentHash === '#admin' || currentHash === '#admin-login') {
     navigateTo('admin-login');
+  } else if (currentHash.startsWith('#post-')) {
+    const postId = currentHash.substring(1); // removes the '#'
+    window.loadPostReader(postId, 'home');
   } else {
     navigateTo('home');
   }

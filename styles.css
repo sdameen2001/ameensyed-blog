@@ -1698,7 +1698,8 @@ body.light-theme .editor-toolbar {
   #view-home, 
   #view-admin-login, 
   #view-admin-console,
-  .reader-actions-row {
+  .reader-actions-row,
+  .reader-share-row {
     display: none !important;
   }
 
@@ -1836,4 +1837,70 @@ body.light-theme .editor-toolbar {
     font-size: 10pt !important;
     color: #555555 !important;
   }
+}
+
+/* ==========================================================================
+   SHARE ARTICLE TOOLBAR STYLES
+   ========================================================================== */
+.reader-share-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px dashed var(--glass-border);
+}
+
+.share-label {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.share-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  backdrop-filter: blur(10px);
+}
+
+.share-btn:hover {
+  transform: translateY(-2px);
+  color: #ffffff;
+}
+
+.share-btn.whatsapp:hover {
+  background-color: #25d366;
+  border-color: #25d366;
+  box-shadow: 0 0 12px rgba(37, 211, 102, 0.4);
+}
+
+.share-btn.linkedin:hover {
+  background-color: #0077b5;
+  border-color: #0077b5;
+  box-shadow: 0 0 12px rgba(0, 119, 181, 0.4);
+}
+
+.share-btn.copy:hover {
+  background-color: var(--accent-purple);
+  border-color: var(--accent-purple);
+  box-shadow: var(--neon-glow-purple);
+}
+
+.share-btn i {
+  font-size: 0.98rem;
 }

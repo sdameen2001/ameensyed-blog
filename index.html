@@ -137,6 +137,12 @@
               <span id="reader-date"><i class="fa-regular fa-calendar"></i> May 25, 2026</span>
               <span id="reader-read-time"><i class="fa-regular fa-clock"></i> 5 min read</span>
             </div>
+            <div class="reader-share-row">
+              <span class="share-label"><i class="fa-solid fa-share-nodes"></i> Share:</span>
+              <button class="share-btn whatsapp" onclick="window.shareToWhatsApp()" title="Share to WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
+              <button class="share-btn linkedin" onclick="window.shareToLinkedIn()" title="Share to LinkedIn"><i class="fa-brands fa-linkedin-in"></i></button>
+              <button class="share-btn copy" onclick="window.copyArticleLink()" title="Copy Link"><i class="fa-solid fa-link"></i></button>
+            </div>
           </header>
           
           <div class="reader-banner" id="reader-banner-box">
@@ -440,6 +446,6 @@
   </dialog>
 
   <!-- Script for local DB handlers and client views -->
-  <script src="script.js?v=10"></script>
+  <script src="script.js?v=11"></script>
 </body>
 </html>
