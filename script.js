@@ -128,6 +128,40 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 300);
     }, 3000);
   }
+
+  function playNotificationChime() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+      gain1.gain.setValueAtTime(0, ctx.currentTime);
+      gain1.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.35);
+      
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08); // E5
+      gain2.gain.setValueAtTime(0, ctx.currentTime + 0.08);
+      gain2.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+      osc2.start(ctx.currentTime + 0.08);
+      osc2.stop(ctx.currentTime + 0.5);
+    } catch (err) {
+      console.warn("AudioContext chime failed:", err);
+    }
+  }
   
   // Default embedded Firebase configuration for all public readers & devices
   const embeddedConfig = {
@@ -215,8 +249,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 2. subscribers collection listener
+    let isInitialSubscribersLoad = true;
     firestore.collection('subscribers').onSnapshot(snapshot => {
       const subs = [];
+      let newSubName = '';
+      
+      snapshot.docChanges().forEach(change => {
+        if (change.type === 'added' && !isInitialSubscribersLoad) {
+          const data = change.doc.data();
+          newSubName = data.name || 'A new reader';
+        }
+      });
+
       snapshot.forEach(doc => {
         const data = doc.data();
         subs.push({
@@ -227,6 +271,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
       localStorage.setItem('blog-subscribers', JSON.stringify(subs));
+      
+      if (newSubName) {
+        playNotificationChime();
+        showToast(`🎉 New subscriber: ${newSubName} just subscribed!`);
+      }
       
       const activePanel = document.querySelector('.view-panel.active');
       if (activePanel && activePanel.id === 'view-admin-console') {
@@ -239,13 +288,26 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       }
+      isInitialSubscribersLoad = false;
     }, error => {
       console.error("Firestore subscribers sync failure:", error);
     });
 
     // 3. comments collection listener
+    let isInitialCommentsLoad = true;
     firestore.collection('comments').onSnapshot(snapshot => {
       const comms = [];
+      let newCommentName = '';
+      
+      snapshot.docChanges().forEach(change => {
+        if (change.type === 'added' && !isInitialCommentsLoad) {
+          const data = change.doc.data();
+          if (data.status === 'pending') {
+            newCommentName = data.name || 'A reader';
+          }
+        }
+      });
+
       snapshot.forEach(doc => {
         const data = doc.data();
         comms.push({
@@ -259,6 +321,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
       localStorage.setItem('blog-comments', JSON.stringify(comms));
+      
+      if (newCommentName) {
+        playNotificationChime();
+        showToast(`💬 New comment from ${newCommentName} is awaiting moderation!`);
+      }
       
       const activePanel = document.querySelector('.view-panel.active');
       if (activePanel) {
@@ -277,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       }
+      isInitialCommentsLoad = false;
     }, error => {
       console.error("Firestore comments sync failure:", error);
     });
@@ -1028,6 +1096,33 @@ document.addEventListener('DOMContentLoaded', () => {
   const newsForm = document.getElementById('newsletter-form');
   const newsStatus = document.getElementById('newsletter-status');
 
+  function sendSubscriberAlertEmail(name, email, phone) {
+    const serviceId = localStorage.getItem('emailjs-service-id');
+    const alertTemplateId = localStorage.getItem('emailjs-alert-template-id');
+    const publicKey = localStorage.getItem('emailjs-public-key');
+    if (!serviceId || !alertTemplateId || !publicKey) {
+      console.log("Subscriber Alert: Credentials not fully configured. Running in local alert mode only.");
+      return;
+    }
+    if (typeof emailjs === 'undefined') {
+      console.warn("Subscriber Alert: EmailJS SDK not loaded.");
+      return;
+    }
+    emailjs.init(publicKey);
+    emailjs.send(serviceId, alertTemplateId, {
+      subscriber_name: name,
+      subscriber_email: email,
+      subscriber_phone: phone,
+      signup_date: new Date().toLocaleString()
+    })
+    .then(() => {
+      console.log("✔ Subscriber signup alert successfully dispatched to admin.");
+    })
+    .catch(err => {
+      console.error("❌ Subscriber signup alert dispatch failure:", err);
+    });
+  }
+
   window.handleSubscribe = function(e) {
     e.preventDefault();
     const nameVal = document.getElementById('news-name').value.trim();
@@ -1067,7 +1162,13 @@ document.addEventListener('DOMContentLoaded', () => {
         email: emailVal,
         phone: phoneVal,
         timestamp: Date.now()
+      }).then(() => {
+        // Dispatch subscription notification to admin if configured
+        sendSubscriberAlertEmail(nameVal, emailVal, phoneVal);
       }).catch(err => console.error("Firestore subscribe failure:", err));
+    } else {
+      // Local mode alert dispatch
+      sendSubscriberAlertEmail(nameVal, emailVal, phoneVal);
     }
     
     if (newsStatus) {
@@ -1373,11 +1474,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const templateId = document.getElementById('emailjs-template-id').value.trim();
     const publicKey = document.getElementById('emailjs-public-key').value.trim();
     const senderName = document.getElementById('emailjs-sender-name').value.trim();
+    const alertTemplateId = document.getElementById('emailjs-alert-template-id').value.trim();
 
     localStorage.setItem('emailjs-service-id', serviceId);
     localStorage.setItem('emailjs-template-id', templateId);
     localStorage.setItem('emailjs-public-key', publicKey);
     localStorage.setItem('emailjs-sender-name', senderName);
+    localStorage.setItem('emailjs-alert-template-id', alertTemplateId);
 
     showToast("✔ EmailJS API keys saved successfully!");
   };
@@ -1389,11 +1492,13 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('emailjs-template-id');
       localStorage.removeItem('emailjs-public-key');
       localStorage.removeItem('emailjs-sender-name');
+      localStorage.removeItem('emailjs-alert-template-id');
 
       document.getElementById('emailjs-service-id').value = '';
       document.getElementById('emailjs-template-id').value = '';
       document.getElementById('emailjs-public-key').value = '';
       document.getElementById('emailjs-sender-name').value = 'Ameen Syed';
+      document.getElementById('emailjs-alert-template-id').value = '';
 
       showToast("✔ EmailJS credentials cleared.");
     }
@@ -1405,16 +1510,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const templateId = localStorage.getItem('emailjs-template-id');
     const publicKey = localStorage.getItem('emailjs-public-key');
     const senderName = localStorage.getItem('emailjs-sender-name') || 'Ameen Syed';
+    const alertTemplateId = localStorage.getItem('emailjs-alert-template-id');
 
     const inputServiceId = document.getElementById('emailjs-service-id');
     const inputTemplateId = document.getElementById('emailjs-template-id');
     const inputPublicKey = document.getElementById('emailjs-public-key');
     const inputSenderName = document.getElementById('emailjs-sender-name');
+    const inputAlertTemplateId = document.getElementById('emailjs-alert-template-id');
 
     if (inputServiceId && serviceId) inputServiceId.value = serviceId;
     if (inputTemplateId && templateId) inputTemplateId.value = templateId;
     if (inputPublicKey && publicKey) inputPublicKey.value = publicKey;
     if (inputSenderName && senderName) inputSenderName.value = senderName;
+    if (inputAlertTemplateId && alertTemplateId) inputAlertTemplateId.value = alertTemplateId;
   }
 
   // Pre-fill EmailJS config and initialize routing
