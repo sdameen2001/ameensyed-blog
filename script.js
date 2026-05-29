@@ -32,6 +32,30 @@ const DEFAULT_POSTS = [
 
 document.addEventListener('DOMContentLoaded', () => {
   
+  function getDirectImageUrl(url) {
+    if (!url) return '';
+    url = url.trim();
+    
+    // Strip query parameters and trailing slashes
+    const cleanUrl = url.split('?')[0].replace(/\/$/, '');
+    
+    // Regex for Unsplash page URLs (with or without long descriptive slug strings)
+    const unsplashPageRegex = /unsplash\.com\/photos\/([a-zA-Z0-9\-_]+)$/;
+    const unsplashSlugRegex = /unsplash\.com\/photos\/.*-([a-zA-Z0-9\-_]+)$/;
+    
+    let match = cleanUrl.match(unsplashSlugRegex);
+    if (!match) {
+      match = cleanUrl.match(unsplashPageRegex);
+    }
+    
+    if (match && match[1]) {
+      const photoId = match[1];
+      return `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=800&q=80`;
+    }
+    
+    return url;
+  }
+
   // Initialize Cloud Sync state
   let isCloudSyncActive = false;
   let firestore = null;
@@ -412,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     posts.forEach(post => {
       // Image URL banner fallback
-      const bannerImg = post.banner ? post.banner : 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80';
+      const bannerImg = post.banner ? getDirectImageUrl(post.banner) : 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80';
       
       const card = document.createElement('div');
       card.className = 'blog-card glass-panel';
@@ -495,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (readerReadTime) readerReadTime.innerHTML = `<i class="fa-regular fa-clock"></i> ${post.readTime}`;
     
     if (readerBannerBox) {
-      const bannerImg = post.banner ? post.banner : 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80';
+      const bannerImg = post.banner ? getDirectImageUrl(post.banner) : 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80';
       readerBannerBox.innerHTML = `<img src="${bannerImg}" alt="${post.title}" class="reader-banner-img">`;
     }
 
