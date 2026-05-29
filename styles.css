@@ -1603,12 +1603,17 @@ body.light-theme .editor-toolbar {
     gap: 25px;
   }
   
-  .newsletter-card form {
-    flex-direction: column;
-    width: 100%;
+  .newsletter-fields-row {
+    grid-template-columns: 1fr;
   }
   
-  .newsletter-card form button {
+  .newsletter-submit-row {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .newsletter-submit-btn {
     width: 100%;
     justify-content: center;
   }
@@ -1910,4 +1915,57 @@ body.light-theme .editor-toolbar {
 
 .share-btn i {
   font-size: 0.98rem;
+}
+
+/* ==========================================================================
+   NEWSLETTER ADVANCED INPUTS & RESPONSIVE LAYOUT
+   ========================================================================== */
+.newsletter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 520px;
+  margin: 20px auto 0 auto;
+  width: 100%;
+}
+
+.newsletter-fields-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+.newsletter-submit-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.newsletter-submit-btn {
+  margin: 0;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.newsletter-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 8px;
+  color: #ffffff !important;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.newsletter-input:focus {
+  border-color: var(--accent-purple) !important;
+  box-shadow: 0 0 10px rgba(138, 75, 240, 0.15) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
 }

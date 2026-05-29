@@ -194,7 +194,13 @@ document.addEventListener('DOMContentLoaded', () => {
     firestore.collection('subscribers').onSnapshot(snapshot => {
       const subs = [];
       snapshot.forEach(doc => {
-        subs.push(doc.id);
+        const data = doc.data();
+        subs.push({
+          name: data.name || '',
+          email: doc.id,
+          phone: data.phone || '',
+          timestamp: data.timestamp || Date.now()
+        });
       });
       localStorage.setItem('blog-subscribers', JSON.stringify(subs));
       
@@ -947,27 +953,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.handleSubscribe = function(e) {
     e.preventDefault();
+    const nameVal = document.getElementById('news-name').value.trim();
+    const phoneVal = document.getElementById('news-phone').value.trim();
     const emailVal = document.getElementById('news-email').value.trim();
     if (!emailVal) return;
     
-    // Save to localStorage
+    // Save to localStorage (as an object containing all three fields)
     const localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
-    if (!localSubs.includes(emailVal)) {
-      localSubs.push(emailVal);
-      localStorage.setItem('blog-subscribers', JSON.stringify(localSubs));
+    
+    const existingIndex = localSubs.findIndex(s => {
+      if (typeof s === 'string') return s === emailVal;
+      return s.email === emailVal;
+    });
+
+    if (existingIndex === -1) {
+      localSubs.push({
+        name: nameVal,
+        email: emailVal,
+        phone: phoneVal,
+        timestamp: Date.now()
+      });
+    } else {
+      localSubs[existingIndex] = {
+        name: nameVal,
+        email: emailVal,
+        phone: phoneVal,
+        timestamp: typeof localSubs[existingIndex] === 'string' ? Date.now() : (localSubs[existingIndex].timestamp || Date.now())
+      };
     }
+    localStorage.setItem('blog-subscribers', JSON.stringify(localSubs));
     
     // Save to Firestore if cloud sync is active
     if (isCloudSyncActive && firestore) {
       firestore.collection('subscribers').doc(emailVal).set({
+        name: nameVal,
         email: emailVal,
+        phone: phoneVal,
         timestamp: Date.now()
       }).catch(err => console.error("Firestore subscribe failure:", err));
     }
     
     if (newsStatus) {
       newsStatus.classList.add('success');
-      newsStatus.textContent = `✔ Thank you! '${emailVal}' has been added to our notification registry.`;
+      newsStatus.textContent = `✔ Thank you, ${nameVal}! You have been subscribed successfully.`;
       newsStatus.style.display = 'block';
       if (newsForm) newsForm.reset();
       
@@ -999,7 +1027,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localSubs.length === 0) {
       subscribersTableBody.innerHTML = `
         <tr>
-          <td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 30px;">
+          <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 30px;">
             No subscribers registered yet. Public newsletter signups will populate here in real-time.
           </td>
         </tr>
@@ -1007,10 +1035,17 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    localSubs.forEach(email => {
+    localSubs.forEach(s => {
       const row = document.createElement('tr');
+      // Fallback if s is still a string from previous session
+      const name = typeof s === 'string' ? 'N/A' : (s.name || 'N/A');
+      const email = typeof s === 'string' ? s : (s.email || 'N/A');
+      const phone = typeof s === 'string' ? 'N/A' : (s.phone || 'N/A');
+
       row.innerHTML = `
-        <td style="font-weight:600; color:var(--text-primary);">${email}</td>
+        <td style="font-weight:600; color:var(--text-primary);">${name}</td>
+        <td>${email}</td>
+        <td>${phone}</td>
         <td><span class="badge-status pub"><i class="fa-solid fa-circle-check"></i> Active</span></td>
         <td>
           <button class="action-icon-btn delete" onclick="deleteSubscriber('${email}')" title="Remove Subscriber"><i class="fa-solid fa-user-minus"></i></button>
@@ -1023,7 +1058,10 @@ document.addEventListener('DOMContentLoaded', () => {
   window.deleteSubscriber = function(email) {
     if (confirm(`Are you sure you want to permanently remove subscriber '${email}' from your audience list?`)) {
       const localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
-      const updatedSubs = localSubs.filter(s => s !== email);
+      const updatedSubs = localSubs.filter(s => {
+        if (typeof s === 'string') return s !== email;
+        return s.email !== email;
+      });
       
       localStorage.setItem('blog-subscribers', JSON.stringify(updatedSubs));
       
@@ -1127,11 +1165,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let sentCount = 0;
     let failCount = 0;
 
-    const promises = localSubs.map(email => {
+    const promises = localSubs.map(s => {
+      const email = typeof s === 'string' ? s : s.email;
+      const subName = typeof s === 'string' ? 'Subscriber' : (s.name || 'Subscriber');
       const shareUrl = `${window.location.origin}${window.location.pathname}#${post.id}`;
       const templateParams = {
         to_email: email,
         subscriber_email: email,
+        subscriber_name: subName,
         sender_name: senderName,
         article_title: post.title,
         article_category: post.category,

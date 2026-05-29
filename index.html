@@ -115,9 +115,15 @@
           <div class="news-icon"><i class="fa-solid fa-envelope-open-text"></i></div>
           <h3>Subscribe to Operational Updates</h3>
           <p>Get the latest posts regarding corporate ledger booking, tally prime workflows, and financial strategies delivered straight to your mailbox.</p>
-          <form id="newsletter-form" onsubmit="handleSubscribe(event)">
-            <input type="email" id="news-email" placeholder="Enter your business email" required>
-            <button type="submit" class="btn btn-primary">Subscribe</button>
+          <form id="newsletter-form" onsubmit="handleSubscribe(event)" class="newsletter-form">
+            <div class="newsletter-fields-row">
+              <input type="text" id="news-name" class="newsletter-input" placeholder="Full Name" required>
+              <input type="tel" id="news-phone" class="newsletter-input" placeholder="Phone Number" required>
+            </div>
+            <div class="newsletter-submit-row">
+              <input type="email" id="news-email" class="newsletter-input" placeholder="Enter your business email" required>
+              <button type="submit" class="btn btn-primary newsletter-submit-btn">Subscribe</button>
+            </div>
           </form>
           <div id="newsletter-status" class="newsletter-status"></div>
         </div>
@@ -472,8 +478,10 @@
                   <table class="admin-table">
                     <thead>
                       <tr>
-                        <th>Subscriber Email</th>
-                        <th>Subscription Date</th>
+                        <th>Subscriber Name</th>
+                        <th>Email Address</th>
+                        <th>Phone Number</th>
+                        <th>Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
