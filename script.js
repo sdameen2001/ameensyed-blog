@@ -146,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Set up real-time Firestore database sync if active
   if (isCloudSyncActive && firestore) {
+    // 1. blogs collection listener
     firestore.collection('blogs').orderBy('timestamp', 'desc').onSnapshot(snapshot => {
       const posts = [];
       snapshot.forEach(doc => {
@@ -160,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
           summary: data.summary,
           content: data.content,
           status: data.status,
+          views: data.views || 0,
           timestamp: data.timestamp
         });
       });
@@ -186,6 +188,52 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }, error => {
       console.error("Firestore real-time sync failure:", error);
+    });
+
+    // 2. subscribers collection listener
+    firestore.collection('subscribers').onSnapshot(snapshot => {
+      const subs = [];
+      snapshot.forEach(doc => {
+        subs.push(doc.id);
+      });
+      localStorage.setItem('blog-subscribers', JSON.stringify(subs));
+      
+      const activePanel = document.querySelector('.view-panel.active');
+      if (activePanel && activePanel.id === 'view-admin-console') {
+        renderAdminDashboard();
+      }
+    }, error => {
+      console.error("Firestore subscribers sync failure:", error);
+    });
+
+    // 3. analytics/site document listener
+    firestore.collection('analytics').doc('site').onSnapshot(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        localStorage.setItem('site-views', data.views || 0);
+        
+        const activePanel = document.querySelector('.view-panel.active');
+        if (activePanel && activePanel.id === 'view-admin-console') {
+          renderAdminDashboard();
+        }
+      }
+    }, error => {
+      console.error("Firestore analytics sync failure:", error);
+    });
+  }
+
+  // Increment site views on load
+  let localSiteViews = parseInt(localStorage.getItem('site-views')) || 0;
+  localSiteViews++;
+  localStorage.setItem('site-views', localSiteViews);
+  
+  if (isCloudSyncActive && firestore) {
+    firestore.collection('analytics').doc('site').set({
+      views: firebase.firestore.FieldValue.increment(1)
+    }, { merge: true }).catch(err => {
+      firestore.collection('analytics').doc('site').set({
+        views: localSiteViews
+      }, { merge: true });
     });
   }
 
@@ -398,6 +446,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const post = allPosts.find(p => p.id === postId);
     if (!post) return;
 
+    // Increment page views for this post (only for public views)
+    if (source !== 'admin') {
+      post.views = (post.views || 0) + 1;
+      const postIdx = allPosts.findIndex(p => p.id === postId);
+      if (postIdx !== -1) {
+        allPosts[postIdx].views = post.views;
+      }
+      localStorage.setItem('blog-database', JSON.stringify(allPosts));
+
+      if (isCloudSyncActive && firestore) {
+        firestore.collection('blogs').doc(postId).update({
+          views: firebase.firestore.FieldValue.increment(1)
+        }).catch(err => {
+          firestore.collection('blogs').doc(postId).set({
+            views: post.views
+          }, { merge: true });
+        });
+      }
+    }
+
     // Toggle Print/PDF button visibility (only show for Admin preview sessions)
     const printBtn = document.querySelector('.print-btn');
     if (printBtn) {
@@ -604,14 +672,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================================================
   const statTotalPosts = document.getElementById('stat-total-posts');
   const statTotalDrafts = document.getElementById('stat-total-drafts');
+  const statTotalSubscribers = document.getElementById('stat-total-subscribers');
+  const statTotalViews = document.getElementById('stat-total-views');
 
   function renderAdminDashboard() {
     const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
+    const localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
+    const localSiteViews = parseInt(localStorage.getItem('site-views')) || 0;
     
-    if (statTotalPosts) statTotalPosts.textContent = allPosts.length;
+    if (statTotalPosts) {
+      const publishedCount = allPosts.filter(p => p.status === 'published').length;
+      statTotalPosts.textContent = publishedCount;
+    }
     if (statTotalDrafts) {
       const draftsCount = allPosts.filter(p => p.status === 'draft').length;
       statTotalDrafts.textContent = draftsCount;
+    }
+    if (statTotalSubscribers) {
+      statTotalSubscribers.textContent = localSubs.length;
+    }
+    if (statTotalViews) {
+      statTotalViews.textContent = localSiteViews.toLocaleString();
     }
   }
 
@@ -840,12 +921,28 @@ document.addEventListener('DOMContentLoaded', () => {
   window.handleSubscribe = function(e) {
     e.preventDefault();
     const emailVal = document.getElementById('news-email').value.trim();
+    if (!emailVal) return;
+    
+    // Save to localStorage
+    const localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
+    if (!localSubs.includes(emailVal)) {
+      localSubs.push(emailVal);
+      localStorage.setItem('blog-subscribers', JSON.stringify(localSubs));
+    }
+    
+    // Save to Firestore if cloud sync is active
+    if (isCloudSyncActive && firestore) {
+      firestore.collection('subscribers').doc(emailVal).set({
+        email: emailVal,
+        timestamp: Date.now()
+      }).catch(err => console.error("Firestore subscribe failure:", err));
+    }
     
     if (newsStatus) {
       newsStatus.classList.add('success');
       newsStatus.textContent = `✔ Thank you! '${emailVal}' has been added to our notification registry.`;
       newsStatus.style.display = 'block';
-      newsForm.reset();
+      if (newsForm) newsForm.reset();
       
       setTimeout(() => {
         newsStatus.style.display = 'none';
