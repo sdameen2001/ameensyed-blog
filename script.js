@@ -474,19 +474,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let configObj = null;
     
     try {
+      // 1. Try native JSON parsing first
       configObj = JSON.parse(configStr);
     } catch (err1) {
-      const regex = /\{[\s\S]*?\}/;
-      const match = configStr.match(regex);
+      // 2. If it's a JS object block, extract the braces and evaluate it safely
+      const match = configStr.match(/\{[\s\S]*\}/);
       if (match) {
         try {
-          let jsonStr = match[0]
-            .replace(/([a-zA-Z0-9_]+)\s*:/g, '"$1":')
-            .replace(/'([^']*)'/g, '"$1"')
-            .replace(/,\s*([\}\]])/g, '$1');
-          configObj = JSON.parse(jsonStr);
+          configObj = (new Function("return " + match[0]))();
         } catch (err2) {
-          console.error("Failed to extract JavaScript object formatting:", err2);
+          console.error("Failed to parse JavaScript object format:", err2);
         }
       }
     }
