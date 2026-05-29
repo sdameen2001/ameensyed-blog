@@ -254,7 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
           name: data.name || '',
           content: data.content || '',
           timestamp: data.timestamp || Date.now(),
-          status: data.status || 'pending'
+          status: data.status || 'pending',
+          replies: data.replies || []
         });
       });
       localStorage.setItem('blog-comments', JSON.stringify(comms));
@@ -1625,7 +1626,54 @@ document.addEventListener('DOMContentLoaded', () => {
           <p class="comment-content">${comment.content}</p>
         </div>
       `;
-      listContainer.appendChild(card);
+      
+      // Render replies if they exist
+      const repliesContainer = document.createElement('div');
+      repliesContainer.className = 'comment-replies-container';
+      
+      const commentReplies = comment.replies || [];
+      commentReplies.forEach(reply => {
+        const replyInitials = reply.name.split(' ').map(p => p.charAt(0).toUpperCase()).slice(0, 2).join('');
+        const replyTime = new Date(reply.timestamp).toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        const replyCard = document.createElement('div');
+        replyCard.className = 'comment-card reply-card';
+        
+        let authorBadge = '';
+        let avatarStyle = '';
+        
+        if (reply.isAdmin) {
+          authorBadge = `<span class="badge-status pub" style="font-size: 0.65rem; margin-left: 8px; vertical-align: middle; background: rgba(242, 93, 156, 0.12); color: var(--accent-gold); border: 1px solid rgba(242, 93, 156, 0.2);"><i class="fa-solid fa-user-tie"></i> Syed Ameen (Author)</span>`;
+          avatarStyle = 'style="background: linear-gradient(135deg, var(--accent-gold), hsl(20, 90%, 50%)); box-shadow: 0 0 8px rgba(242, 93, 156, 0.35); border: 1px solid var(--accent-gold); color: white !important;"';
+        }
+        
+        replyCard.innerHTML = `
+          <div class="comment-avatar" ${avatarStyle}>${replyInitials}</div>
+          <div style="flex-grow: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 5px;">
+              <h5 class="comment-author-name" style="font-size: 0.95rem;">${reply.name} ${authorBadge}</h5>
+              <span class="comment-date" style="font-size: 0.72rem;">${replyTime}</span>
+            </div>
+            <p class="comment-content" style="font-size: 0.88rem;">${reply.content}</p>
+          </div>
+        `;
+        repliesContainer.appendChild(replyCard);
+      });
+
+      const commentGroup = document.createElement('div');
+      commentGroup.style.cssText = 'display: flex; flex-direction: column; gap: 10px; width: 100%;';
+      commentGroup.appendChild(card);
+      if (commentReplies.length > 0) {
+        commentGroup.appendChild(repliesContainer);
+      }
+      
+      listContainer.appendChild(commentGroup);
     });
   };
 
@@ -1674,18 +1722,30 @@ document.addEventListener('DOMContentLoaded', () => {
         ? `<button class="action-icon-btn approve" onclick="approveComment('${comment.id}')" title="Approve Comment"><i class="fa-solid fa-check"></i></button>`
         : '';
         
+      let repliesSnippet = '';
+      if (comment.replies && comment.replies.length > 0) {
+        const lastReply = comment.replies[comment.replies.length - 1];
+        repliesSnippet = `
+          <div style="margin-top: 6px; font-size: 0.76rem; padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.03); border-left: 2px solid var(--accent-purple); color: var(--text-secondary); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="Replies count: ${comment.replies.length}. Last: ${lastReply.content}">
+            <i class="fa-solid fa-reply" style="transform: scaleX(-1); margin-right: 4px; color: var(--accent-purple);"></i> <strong>Replied:</strong> ${lastReply.content}
+          </div>
+        `;
+      }
+        
       const row = document.createElement('tr');
       row.innerHTML = `
         <td style="font-weight: 600; color: var(--text-primary); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${postTitle}">${postTitle}</td>
         <td style="font-weight: 600; color: var(--text-primary);">${comment.name}</td>
         <td>
           <div style="max-width: 250px; max-height: 80px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;" title="${comment.content}">${comment.content}</div>
+          ${repliesSnippet}
         </td>
         <td style="font-size: 0.8rem; white-space: nowrap;">${formattedTime}</td>
         <td>${statusBadge}</td>
         <td>
           <div style="display: flex; gap: 8px;">
             ${approveBtn}
+            <button class="action-icon-btn reply" onclick="openCommentReplyDialog('${comment.id}')" title="Reply to Comment"><i class="fa-solid fa-reply"></i></button>
             <button class="action-icon-btn delete" onclick="deleteComment('${comment.id}')" title="Delete Comment"><i class="fa-solid fa-trash"></i></button>
           </div>
         </td>
@@ -1740,6 +1800,98 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAdminDashboard();
     }
   };
+
+  // ==========================================================================
+  // 14. Comment Replies Control Panel (Syed Ameen / Author Replies)
+  // ==========================================================================
+  let activeReplyCommentId = null;
+
+  window.openCommentReplyDialog = function(commentId) {
+    const localComments = JSON.parse(localStorage.getItem('blog-comments')) || [];
+    const comment = localComments.find(c => c.id === commentId);
+    if (!comment) return;
+    
+    activeReplyCommentId = commentId;
+    
+    const replyDialog = document.getElementById('reply-dialog');
+    const authorPlaceholder = document.getElementById('reply-comment-author');
+    const textPlaceholder = document.getElementById('reply-comment-text-placeholder');
+    const replyInput = document.getElementById('reply-text-input');
+    
+    if (replyDialog && authorPlaceholder && textPlaceholder && replyInput) {
+      authorPlaceholder.textContent = comment.name;
+      textPlaceholder.textContent = comment.content;
+      replyInput.value = '';
+      replyDialog.showModal();
+    }
+  };
+
+  // Reply event listeners
+  const replyDialog = document.getElementById('reply-dialog');
+  const btnCancelReply = document.getElementById('btn-cancel-reply');
+  const btnConfirmReply = document.getElementById('btn-confirm-reply');
+
+  if (btnCancelReply && replyDialog) {
+    btnCancelReply.addEventListener('click', () => {
+      replyDialog.close();
+      activeReplyCommentId = null;
+    });
+  }
+
+  if (btnConfirmReply && replyDialog) {
+    btnConfirmReply.addEventListener('click', () => {
+      const replyInput = document.getElementById('reply-text-input');
+      if (!replyInput || !activeReplyCommentId) return;
+      
+      const content = replyInput.value.trim();
+      if (!content) return;
+      
+      const localComments = JSON.parse(localStorage.getItem('blog-comments')) || [];
+      const comment = localComments.find(c => c.id === activeReplyCommentId);
+      if (!comment) return;
+      
+      if (!comment.replies) {
+        comment.replies = [];
+      }
+      
+      const newReply = {
+        id: 'reply-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        name: 'Syed Ameen',
+        content: content,
+        timestamp: Date.now(),
+        isAdmin: true
+      };
+      
+      comment.replies.push(newReply);
+      
+      // Auto-approve parent comment if it was pending
+      if (comment.status === 'pending') {
+        comment.status = 'approved';
+        showToast("✔ Comment approved and reply posted!");
+      } else {
+        showToast("✔ Reply posted successfully!");
+      }
+      
+      localStorage.setItem('blog-comments', JSON.stringify(localComments));
+      
+      // Update in Firestore if active
+      if (isCloudSyncActive && firestore) {
+        firestore.collection('comments').doc(activeReplyCommentId).update({
+          replies: comment.replies,
+          status: comment.status
+        }).then(() => {
+          console.log(`✔ Comment reply successfully synced to Cloud Firestore.`);
+        }).catch(err => {
+          console.error("Firestore comment reply sync failure:", err);
+        });
+      }
+      
+      replyDialog.close();
+      activeReplyCommentId = null;
+      renderAdminComments();
+      renderAdminDashboard();
+    });
+  }
 
   // Render initial blogs or route to admin / deep-linked posts if hash is provided
   const currentHash = window.location.hash;

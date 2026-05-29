@@ -626,7 +626,27 @@
     </div>
   </dialog>
 
+  <!-- REPLY DIALOG MODAL -->
+  <dialog id="reply-dialog" class="custom-dialog">
+    <div class="dialog-header">
+      <h3><i class="fa-solid fa-reply" style="color: var(--accent-purple);"></i> Syed Ameen's Comment Reply</h3>
+    </div>
+    <div class="dialog-body" style="display: flex; flex-direction: column; gap: 15px;">
+      <p style="margin-bottom: 0; font-size: 0.9rem; color: var(--text-secondary);">Replying to comment by <strong id="reply-comment-author" style="color: var(--text-primary);">Author</strong>:</p>
+      <div class="dialog-target" id="reply-comment-text-placeholder" style="border-left-color: var(--accent-purple); color: var(--text-primary); font-size: 0.88rem; font-style: italic; max-height: 100px; overflow-y: auto; white-space: pre-wrap;">Comment content...</div>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label for="reply-text-input" style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);">Your Reply Content</label>
+        <textarea id="reply-text-input" class="newsletter-input" rows="4" placeholder="Type your reply as Syed Ameen (Author)..." required style="resize: vertical;"></textarea>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-secondary" id="btn-cancel-reply">Cancel</button>
+      <button class="btn btn-primary" id="btn-confirm-reply" style="background-color: var(--accent-purple); border-color: var(--accent-purple); box-shadow: var(--neon-glow-purple);">Post Reply</button>
+    </div>
+  </dialog>
+
   <!-- Script for local DB handlers and client views -->
-  <script src="script.js?v=20"></script>
+  <script src="script.js?v=21"></script>
 </body>
 </html>

@@ -1251,6 +1251,8 @@ body.light-theme .input-group input, body.light-theme .input-group textarea, bod
 .action-icon-btn.broadcast:hover { background-color: var(--accent-purple-glow); }
 .action-icon-btn.approve { color: hsl(140, 75%, 45%); }
 .action-icon-btn.approve:hover { background-color: rgba(16, 185, 129, 0.08); }
+.action-icon-btn.reply { color: var(--accent-purple); }
+.action-icon-btn.reply:hover { background-color: var(--accent-purple-glow); }
 
 .badge-status.notified {
   background-color: rgba(99, 102, 241, 0.08);
@@ -2071,4 +2073,37 @@ body.light-theme .editor-toolbar {
   color: hsl(354, 70%, 54%);
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
+
+/* Nested comment replies styles */
+.comment-replies-container {
+  margin-left: 45px;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-left: 2px solid var(--glass-border);
+  padding-left: 20px;
+  position: relative;
+}
+
+.comment-card.reply-card {
+  padding: 16px;
+  border-radius: var(--border-radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+  box-shadow: none;
+}
+
+.comment-card.reply-card:hover {
+  transform: none;
+  border-color: var(--accent-purple);
+  box-shadow: 0 4px 12px 0 var(--glass-shadow);
+}
+
+@media (max-width: 768px) {
+  .comment-replies-container {
+    margin-left: 20px;
+    padding-left: 10px;
+  }
+}
+
 
