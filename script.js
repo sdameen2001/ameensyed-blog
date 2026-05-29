@@ -35,7 +35,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Cloud Sync state
   let isCloudSyncActive = false;
   let firestore = null;
-  const firebaseConfigStr = localStorage.getItem('firebase-config');
+  
+  // Default embedded Firebase configuration for all public readers & devices
+  const embeddedConfig = {
+    apiKey: "AIzaSyBRtzikgfM1AFdnl1hENEB5iF7Nkr9n4WE",
+    authDomain: "ameensyed-blog.firebaseapp.com",
+    projectId: "ameensyed-blog",
+    storageBucket: "ameensyed-blog.firebasestorage.app",
+    messagingSenderId: "662276929511",
+    appId: "1:662276929511:web:c1d820088ab36acbf62f42",
+    measurementId: "G-3XDN1DMF83"
+  };
+
+  const firebaseConfigStr = localStorage.getItem('firebase-config') || JSON.stringify(embeddedConfig);
 
   if (firebaseConfigStr) {
     try {
