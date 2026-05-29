@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Cloud Sync state
   let isCloudSyncActive = false;
   let firestore = null;
+  let postReaderSource = 'home';
   
   // Default embedded Firebase configuration for all public readers & devices
   const embeddedConfig = {
@@ -318,7 +319,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const readerBannerBox = document.getElementById('reader-banner-box');
   const readerContentBody = document.getElementById('reader-content-body');
 
-  window.loadPostReader = function(postId) {
+  window.loadPostReader = function(postId, source = 'home') {
+    postReaderSource = source;
     const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
     const post = allPosts.find(p => p.id === postId);
     if (!post) return;
@@ -565,6 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${post.date}</td>
         <td>${statusBadge}</td>
         <td>
+          <button class="action-icon-btn preview" onclick="previewPostFromAdmin('${post.id}')" title="Preview Article" style="background-color: rgba(88, 11, 129, 0.08); color: var(--accent-purple);"><i class="fa-solid fa-eye"></i></button>
           <button class="action-icon-btn edit" onclick="editBlogPost('${post.id}')" title="Edit Article"><i class="fa-solid fa-pen-to-square"></i></button>
           <button class="action-icon-btn delete" onclick="triggerDeleteBlogPost('${post.id}')" title="Delete Article"><i class="fa-solid fa-trash-can"></i></button>
         </td>
@@ -667,6 +670,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('edit-post-id').value = '';
     
     switchSubview('manage');
+    
+    // Premium User Experience: Automatically offer an instant preview path right after publishing!
+    setTimeout(() => {
+      if (confirm("✔ Article successfully saved and synchronized! Would you like to preview your article now?")) {
+        window.previewPostFromAdmin(finalPostId);
+      }
+    }, 150);
   };
 
   // EDIT READ ACTION
@@ -798,6 +808,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = prompt("Enter the URL destination:");
     if (url) {
       insertFormat(`<a href="${url}" target="_blank" class="blog-link">`, '</a>');
+    }
+  };
+
+  // ==========================================================================
+  // 12. Visual Post Preview Handlers
+  // ==========================================================================
+  window.previewPostFromAdmin = function(postId) {
+    postReaderSource = 'admin';
+    window.loadPostReader(postId, 'admin');
+  };
+
+  window.handleReaderBack = function() {
+    if (postReaderSource === 'admin') {
+      window.navigateTo('admin-console');
+      switchSubview('manage');
+    } else {
+      window.navigateTo('home');
     }
   };
 
