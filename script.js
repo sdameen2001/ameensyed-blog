@@ -325,6 +325,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const post = allPosts.find(p => p.id === postId);
     if (!post) return;
 
+    // Toggle Print/PDF button visibility (only show for Admin preview sessions)
+    const printBtn = document.querySelector('.print-btn');
+    if (printBtn) {
+      printBtn.style.display = (source === 'admin') ? 'inline-flex' : 'none';
+    }
+
     // Load reader variables
     if (readerTitle) readerTitle.textContent = post.title;
     if (readerCategory) {
