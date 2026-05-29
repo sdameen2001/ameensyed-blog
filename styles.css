@@ -1247,6 +1247,13 @@ body.light-theme .input-group input, body.light-theme .input-group textarea, bod
 .action-icon-btn.edit:hover { background-color: var(--accent-gold-glow); }
 .action-icon-btn.delete { color: hsl(354, 70%, 54%); }
 .action-icon-btn.delete:hover { background-color: rgba(239, 68, 68, 0.08); }
+.action-icon-btn.broadcast { color: var(--accent-purple); }
+.action-icon-btn.broadcast:hover { background-color: var(--accent-purple-glow); }
+
+.badge-status.notified {
+  background-color: rgba(99, 102, 241, 0.08);
+  color: var(--accent-purple);
+}
 
 /* Dialog Modals styles */
 .custom-dialog {

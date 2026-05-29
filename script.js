@@ -200,7 +200,14 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const activePanel = document.querySelector('.view-panel.active');
       if (activePanel && activePanel.id === 'view-admin-console') {
-        renderAdminDashboard();
+        const activeSubview = document.querySelector('.admin-subview.active');
+        if (activeSubview) {
+          if (activeSubview.id === 'subview-overview') {
+            renderAdminDashboard();
+          } else if (activeSubview.id === 'subview-subscribers') {
+            renderAdminSubscribers();
+          }
+        }
       }
     }, error => {
       console.error("Firestore subscribers sync failure:", error);
@@ -587,6 +594,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renderAdminTable();
     } else if (subviewId === 'cloud') {
       renderCloudSettingsPanel();
+    } else if (subviewId === 'subscribers') {
+      renderAdminSubscribers();
     } else if (subviewId === 'editor') {
       // Check if editor form contains pre-populated ID (edit mode)
       const editId = document.getElementById('edit-post-id').value;
@@ -623,6 +632,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (statusDesc) statusDesc.textContent = "All blog posts are currently saved in your browser's local cache. Add your Firebase configurations below to upgrade to cloud sync.";
       if (statusBox) statusBox.classList.remove('active');
     }
+
+    // Pre-fill saved EmailJS configurations if they exist
+    loadSavedEmailJSConfig();
   }
 
   // Save Config and initialize cloud connection
@@ -717,9 +729,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     allPosts.forEach(post => {
       const row = document.createElement('tr');
-      const statusBadge = post.status === 'published' 
-        ? `<span class="badge-status pub">Published</span>` 
-        : `<span class="badge-status draft">Draft</span>`;
+      let statusBadge = '';
+      if (post.status === 'draft') {
+        statusBadge = `<span class="badge-status draft">Draft</span>`;
+      } else {
+        if (post.broadcasted) {
+          statusBadge = `<span class="badge-status pub">Published</span> <span class="badge-status notified" style="margin-left: 5px;" title="Newsletter broadcasted to subscribers"><i class="fa-solid fa-paper-plane"></i> Sent</span>`;
+        } else {
+          statusBadge = `<span class="badge-status pub">Published</span>`;
+        }
+      }
+
+      let broadcastBtn = '';
+      if (post.status === 'draft') {
+        broadcastBtn = `<button class="action-icon-btn" style="color: rgba(255,255,255,0.1); cursor: not-allowed;" title="Drafts cannot be broadcasted"><i class="fa-solid fa-envelope"></i></button>`;
+      } else {
+        broadcastBtn = `<button class="action-icon-btn broadcast" onclick="triggerBroadcastBlogPost('${post.id}')" title="${post.broadcasted ? 'Resend Newsletter Broadcast' : 'Send Newsletter Broadcast'}"><i class="fa-solid fa-envelope"></i></button>`;
+      }
 
       row.innerHTML = `
         <td style="font-weight:600; color:var(--text-primary);">${post.title}</td>
@@ -728,6 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${statusBadge}</td>
         <td>
           <button class="action-icon-btn preview" onclick="previewPostFromAdmin('${post.id}')" title="Preview Article" style="background-color: rgba(88, 11, 129, 0.08); color: var(--accent-purple);"><i class="fa-solid fa-eye"></i></button>
+          ${broadcastBtn}
           <button class="action-icon-btn edit" onclick="editBlogPost('${post.id}')" title="Edit Article"><i class="fa-solid fa-pen-to-square"></i></button>
           <button class="action-icon-btn delete" onclick="triggerDeleteBlogPost('${post.id}')" title="Delete Article"><i class="fa-solid fa-trash-can"></i></button>
         </td>
@@ -957,6 +984,258 @@ document.addEventListener('DOMContentLoaded', () => {
       navigateTo('admin-login');
     }
   });
+
+  // ==========================================================================
+  // 10A. Subscribers list rendering and deletion
+  // ==========================================================================
+  const subscribersTableBody = document.getElementById('admin-subscribers-table-body');
+
+  function renderAdminSubscribers() {
+    if (!subscribersTableBody) return;
+    subscribersTableBody.innerHTML = '';
+
+    const localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
+    
+    if (localSubs.length === 0) {
+      subscribersTableBody.innerHTML = `
+        <tr>
+          <td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 30px;">
+            No subscribers registered yet. Public newsletter signups will populate here in real-time.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    localSubs.forEach(email => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td style="font-weight:600; color:var(--text-primary);">${email}</td>
+        <td><span class="badge-status pub"><i class="fa-solid fa-circle-check"></i> Active</span></td>
+        <td>
+          <button class="action-icon-btn delete" onclick="deleteSubscriber('${email}')" title="Remove Subscriber"><i class="fa-solid fa-user-minus"></i></button>
+        </td>
+      `;
+      subscribersTableBody.appendChild(row);
+    });
+  }
+
+  window.deleteSubscriber = function(email) {
+    if (confirm(`Are you sure you want to permanently remove subscriber '${email}' from your audience list?`)) {
+      const localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
+      const updatedSubs = localSubs.filter(s => s !== email);
+      
+      localStorage.setItem('blog-subscribers', JSON.stringify(updatedSubs));
+      
+      // Delete from Firestore if active
+      if (isCloudSyncActive && firestore) {
+        firestore.collection('subscribers').doc(email).delete().then(() => {
+          console.log(`✔ Successfully removed ${email} from Cloud database.`);
+        }).catch(err => {
+          console.error("Firestore subscriber delete failure:", err);
+        });
+      }
+      
+      showToast(`✔ Subscriber '${email}' has been removed.`);
+      renderAdminSubscribers();
+      renderAdminDashboard();
+    }
+  };
+
+  // ==========================================================================
+  // 10B. Manual Newsletter Broadcast & EmailJS Config
+  // ==========================================================================
+  const broadcastDialog = document.getElementById('broadcast-dialog');
+  const broadcastPostPlaceholder = document.getElementById('broadcast-post-title-placeholder');
+  const broadcastSubscribersCount = document.getElementById('broadcast-subscribers-count');
+  const btnCancelBroadcast = document.getElementById('btn-cancel-broadcast');
+  const btnConfirmBroadcast = document.getElementById('btn-confirm-broadcast');
+  let pendingBroadcastId = null;
+
+  window.triggerBroadcastBlogPost = function(postId) {
+    const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
+    const post = allPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    const localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
+    if (localSubs.length === 0) {
+      showToast("❌ You do not have any newsletter subscribers yet!");
+      return;
+    }
+
+    pendingBroadcastId = postId;
+    if (broadcastPostPlaceholder) broadcastPostPlaceholder.textContent = post.title;
+    if (broadcastSubscribersCount) broadcastSubscribersCount.textContent = `${localSubs.length} Subscriber${localSubs.length === 1 ? '' : 's'}`;
+    if (broadcastDialog) broadcastDialog.showModal();
+  };
+
+  if (btnCancelBroadcast) {
+    btnCancelBroadcast.addEventListener('click', () => {
+      if (broadcastDialog) broadcastDialog.close();
+      pendingBroadcastId = null;
+    });
+  }
+
+  if (btnConfirmBroadcast) {
+    btnConfirmBroadcast.addEventListener('click', () => {
+      if (!pendingBroadcastId) return;
+
+      const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
+      const post = allPosts.find(p => p.id === pendingBroadcastId);
+      if (!post) return;
+
+      // Close the dialog immediately
+      if (broadcastDialog) broadcastDialog.close();
+
+      // Trigger EmailJS dispatch
+      window.broadcastNewPost(post);
+      
+      pendingBroadcastId = null;
+    });
+  }
+
+  window.broadcastNewPost = function(post) {
+    const serviceId = localStorage.getItem('emailjs-service-id');
+    const templateId = localStorage.getItem('emailjs-template-id');
+    const publicKey = localStorage.getItem('emailjs-public-key');
+    const senderName = localStorage.getItem('emailjs-sender-name') || 'Ameen Syed';
+
+    // 1. If not configured, run in Mock Sandbox Mode
+    if (!serviceId || !templateId || !publicKey) {
+      showToast("📬 Sandbox Mode: Simulated newsletter push successfully!");
+      // Mark as broadcasted locally
+      markPostAsBroadcasted(post.id);
+      return;
+    }
+
+    // 2. Real-time EmailJS Broadcast Loop
+    showToast("✉️ Preparing subscriber broadcast...");
+    
+    const localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
+    if (localSubs.length === 0) return;
+
+    // Load EmailJS SDK
+    if (typeof emailjs === 'undefined') {
+      showToast("❌ EmailJS SDK failed to load. Please check your internet connection.");
+      return;
+    }
+
+    // Initialize EmailJS
+    emailjs.init(publicKey);
+
+    // Loop through each subscriber and send email
+    let sentCount = 0;
+    let failCount = 0;
+
+    const promises = localSubs.map(email => {
+      const shareUrl = `${window.location.origin}${window.location.pathname}#${post.id}`;
+      const templateParams = {
+        to_email: email,
+        subscriber_email: email,
+        sender_name: senderName,
+        article_title: post.title,
+        article_category: post.category,
+        article_read_time: post.readTime,
+        article_summary: post.summary,
+        article_url: shareUrl
+      };
+
+      return emailjs.send(serviceId, templateId, templateParams)
+        .then(() => {
+          sentCount++;
+        })
+        .catch(err => {
+          console.error(`Email dispatch failed for ${email}:`, err);
+          failCount++;
+        });
+    });
+
+    Promise.all(promises).then(() => {
+      if (sentCount > 0) {
+        showToast(`✔ Broadcast completed: ${sentCount} emails dispatched successfully!`);
+        markPostAsBroadcasted(post.id);
+      } else {
+        showToast("❌ Broadcast failed. Please verify your EmailJS API keys.");
+      }
+    });
+  };
+
+  function markPostAsBroadcasted(postId) {
+    const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
+    const postIdx = allPosts.findIndex(p => p.id === postId);
+    if (postIdx !== -1) {
+      allPosts[postIdx].broadcasted = true;
+      localStorage.setItem('blog-database', JSON.stringify(allPosts));
+      db = allPosts;
+
+      // Update Firestore if active
+      if (isCloudSyncActive && firestore) {
+        firestore.collection('blogs').doc(postId).update({
+          broadcasted: true
+        }).catch(err => {
+          firestore.collection('blogs').doc(postId).set({
+            broadcasted: true
+          }, { merge: true });
+        });
+      }
+      
+      renderAdminTable();
+    }
+  }
+
+  // Save EmailJS Credentials
+  window.saveEmailJSConfig = function(e) {
+    e.preventDefault();
+    const serviceId = document.getElementById('emailjs-service-id').value.trim();
+    const templateId = document.getElementById('emailjs-template-id').value.trim();
+    const publicKey = document.getElementById('emailjs-public-key').value.trim();
+    const senderName = document.getElementById('emailjs-sender-name').value.trim();
+
+    localStorage.setItem('emailjs-service-id', serviceId);
+    localStorage.setItem('emailjs-template-id', templateId);
+    localStorage.setItem('emailjs-public-key', publicKey);
+    localStorage.setItem('emailjs-sender-name', senderName);
+
+    showToast("✔ EmailJS API keys saved successfully!");
+  };
+
+  // Reset EmailJS Credentials
+  window.resetEmailJSConfig = function() {
+    if (confirm("Are you sure you want to clear your EmailJS configurations? This will return the email system to Sandbox Demo mode.")) {
+      localStorage.removeItem('emailjs-service-id');
+      localStorage.removeItem('emailjs-template-id');
+      localStorage.removeItem('emailjs-public-key');
+      localStorage.removeItem('emailjs-sender-name');
+
+      document.getElementById('emailjs-service-id').value = '';
+      document.getElementById('emailjs-template-id').value = '';
+      document.getElementById('emailjs-public-key').value = '';
+      document.getElementById('emailjs-sender-name').value = 'Ameen Syed';
+
+      showToast("✔ EmailJS credentials cleared.");
+    }
+  };
+
+  // Pre-fill EmailJS Configuration if exists
+  function loadSavedEmailJSConfig() {
+    const serviceId = localStorage.getItem('emailjs-service-id');
+    const templateId = localStorage.getItem('emailjs-template-id');
+    const publicKey = localStorage.getItem('emailjs-public-key');
+    const senderName = localStorage.getItem('emailjs-sender-name') || 'Ameen Syed';
+
+    const inputServiceId = document.getElementById('emailjs-service-id');
+    const inputTemplateId = document.getElementById('emailjs-template-id');
+    const inputPublicKey = document.getElementById('emailjs-public-key');
+    const inputSenderName = document.getElementById('emailjs-sender-name');
+
+    if (inputServiceId && serviceId) inputServiceId.value = serviceId;
+    if (inputTemplateId && templateId) inputTemplateId.value = templateId;
+    if (inputPublicKey && publicKey) inputPublicKey.value = publicKey;
+    if (inputSenderName && senderName) inputSenderName.value = senderName;
+  }
+
+  // Pre-fill EmailJS config and initialize routing
+  loadSavedEmailJSConfig();
 
   // ==========================================================================
   // 11. Visual Textarea Formatting Helpers

@@ -29,6 +29,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
+  <!-- EmailJS SDK for audience newsletter broadcasting -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
   <!-- Custom Stylesheet -->
   <link rel="stylesheet" href="styles.css?v=3">
 </head>
@@ -225,6 +228,9 @@
                 <li class="admin-nav-item" data-subview="cloud" onclick="switchSubview('cloud')">
                   <a href="#cloud"><i class="fa-solid fa-cloud-arrow-up"></i> Cloud Sync Settings</a>
                 </li>
+                <li class="admin-nav-item" data-subview="subscribers" onclick="switchSubview('subscribers')">
+                  <a href="#subscribers"><i class="fa-solid fa-users"></i> Subscribers List</a>
+                </li>
               </ul>
             </nav>
             
@@ -410,6 +416,73 @@
                   </div>
                 </form>
               </div>
+
+              <!-- EmailJS Configuration Card -->
+              <div class="glass-panel cloud-settings-panel" style="margin-top: 25px;">
+                <div class="subview-header" style="padding-top: 0; border: none; margin-bottom: 15px;">
+                  <h3 style="font-family: var(--font-heading); color: #ffffff; display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <i class="fa-solid fa-envelope-open-text" style="color: var(--accent-gold);"></i> Email Broadcast Configuration (EmailJS)
+                  </h3>
+                  <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px; margin-bottom: 0;">Link EmailJS to manually push newsletter broadcasts to your subscribers list.</p>
+                </div>
+                
+                <form id="emailjs-config-form" onsubmit="saveEmailJSConfig(event)" class="cloud-form">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                    <div class="input-group">
+                      <input type="text" id="emailjs-service-id" required placeholder=" ">
+                      <label for="emailjs-service-id">EmailJS Service ID</label>
+                      <span class="focus-border"></span>
+                    </div>
+                    <div class="input-group">
+                      <input type="text" id="emailjs-template-id" required placeholder=" ">
+                      <label for="emailjs-template-id">EmailJS Template ID</label>
+                      <span class="focus-border"></span>
+                    </div>
+                  </div>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                    <div class="input-group">
+                      <input type="text" id="emailjs-public-key" required placeholder=" ">
+                      <label for="emailjs-public-key">EmailJS Public Key</label>
+                      <span class="focus-border"></span>
+                    </div>
+                    <div class="input-group">
+                      <input type="text" id="emailjs-sender-name" required placeholder=" " value="Ameen Syed">
+                      <label for="emailjs-sender-name">Sender Name</label>
+                      <span class="focus-border"></span>
+                    </div>
+                  </div>
+                  
+                  <div class="cloud-actions">
+                    <button type="button" class="btn btn-secondary" onclick="resetEmailJSConfig()">Clear Credentials</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-emailjs">Save API Credentials</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- E. Subscribers list subview -->
+            <div id="subview-subscribers" class="admin-subview">
+              <div class="subview-header">
+                <h2>Subscribers List</h2>
+                <p>Monitor your active email newsletter audience here. All emails are synced in real-time.</p>
+              </div>
+              
+              <div class="glass-panel" style="padding: 20px;">
+                <div class="admin-table-box" style="margin-top: 0; max-height: 400px; overflow-y: auto;">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Subscriber Email</th>
+                        <th>Subscription Date</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="admin-subscribers-table-body">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
             
           </div>
@@ -445,7 +518,27 @@
     </div>
   </dialog>
 
+  <!-- BROADCAST DIALOG MODAL -->
+  <dialog id="broadcast-dialog" class="custom-dialog">
+    <div class="dialog-header">
+      <h3><i class="fa-solid fa-paper-plane" style="color: var(--accent-purple);"></i> Push Email Broadcast?</h3>
+    </div>
+    <div class="dialog-body">
+      <p>You are about to manually broadcast a customized email newsletter for the following article to all your active subscribers in real-time:</p>
+      <div class="dialog-target" id="broadcast-post-title-placeholder" style="border-left-color: var(--accent-purple); color: #ffffff;">Post Title...</div>
+      
+      <div class="broadcast-audience-stats" style="margin-top: 15px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; text-align: center;">
+        <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 4px;">Target Audience</span>
+        <h2 id="broadcast-subscribers-count" style="font-family: var(--font-heading); color: var(--accent-purple); font-size: 1.8rem; font-weight: 700; margin: 0;">0 Subscribers</h2>
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button class="btn btn-secondary" id="btn-cancel-broadcast">Cancel</button>
+      <button class="btn btn-primary" id="btn-confirm-broadcast" style="background-color: var(--accent-purple); border-color: var(--accent-purple); box-shadow: var(--neon-glow-purple);">Send Push Notification Now</button>
+    </div>
+  </dialog>
+
   <!-- Script for local DB handlers and client views -->
-  <script src="script.js?v=12"></script>
+  <script src="script.js?v=13"></script>
 </body>
 </html>
