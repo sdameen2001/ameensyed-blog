@@ -531,11 +531,28 @@
     <div class="dialog-header">
       <h3><i class="fa-solid fa-paper-plane" style="color: var(--accent-purple);"></i> Push Email Broadcast?</h3>
     </div>
-    <div class="dialog-body">
-      <p>You are about to manually broadcast a customized email newsletter for the following article to all your active subscribers in real-time:</p>
+    <div class="dialog-body" style="display: flex; flex-direction: column; gap: 15px;">
+      <p style="margin-bottom: 0;">Select your broadcast audience options to notify subscribers about the following article:</p>
       <div class="dialog-target" id="broadcast-post-title-placeholder" style="border-left-color: var(--accent-purple); color: #ffffff;">Post Title...</div>
       
-      <div class="broadcast-audience-stats" style="margin-top: 15px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; text-align: center;">
+      <!-- Audience Target Select Row -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label for="broadcast-audience-type" style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);">Recipients Group</label>
+        <select id="broadcast-audience-type" class="select-control" onchange="toggleBroadcastAudienceView()" style="width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-primary); outline: none; cursor: pointer;">
+          <option value="all">📢 Send to All Subscribers</option>
+          <option value="single">👤 Send to Specific Subscriber</option>
+        </select>
+      </div>
+
+      <!-- Specific Subscriber Selection Dropdown (Hidden by default) -->
+      <div id="broadcast-single-recipient-box" style="display: none; flex-direction: column; gap: 8px;">
+        <label for="broadcast-single-email" style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary);">Select Subscriber</label>
+        <select id="broadcast-single-email" class="select-control" style="width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-primary); outline: none; cursor: pointer;">
+          <!-- Loaded dynamically -->
+        </select>
+      </div>
+      
+      <div class="broadcast-audience-stats" id="broadcast-audience-stats-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); padding: 12px; border-radius: 8px; text-align: center;">
         <span style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 4px;">Target Audience</span>
         <h2 id="broadcast-subscribers-count" style="font-family: var(--font-heading); color: var(--accent-purple); font-size: 1.8rem; font-weight: 700; margin: 0;">0 Subscribers</h2>
       </div>
@@ -547,6 +564,6 @@
   </dialog>
 
   <!-- Script for local DB handlers and client views -->
-  <script src="script.js?v=17"></script>
+  <script src="script.js?v=18"></script>
 </body>
 </html>

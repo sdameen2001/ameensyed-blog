@@ -1090,6 +1090,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnConfirmBroadcast = document.getElementById('btn-confirm-broadcast');
   let pendingBroadcastId = null;
 
+  window.toggleBroadcastAudienceView = function() {
+    const audienceType = document.getElementById('broadcast-audience-type').value;
+    const singleRecipientBox = document.getElementById('broadcast-single-recipient-box');
+    const audienceStatsCard = document.getElementById('broadcast-audience-stats-card');
+    
+    if (audienceType === 'single') {
+      if (singleRecipientBox) singleRecipientBox.style.display = 'flex';
+      if (audienceStatsCard) audienceStatsCard.style.display = 'none';
+    } else {
+      if (singleRecipientBox) singleRecipientBox.style.display = 'none';
+      if (audienceStatsCard) audienceStatsCard.style.display = 'block';
+    }
+  };
+
   window.triggerBroadcastBlogPost = function(postId) {
     const allPosts = JSON.parse(localStorage.getItem('blog-database')) || [];
     const post = allPosts.find(p => p.id === postId);
@@ -1104,6 +1118,28 @@ document.addEventListener('DOMContentLoaded', () => {
     pendingBroadcastId = postId;
     if (broadcastPostPlaceholder) broadcastPostPlaceholder.textContent = post.title;
     if (broadcastSubscribersCount) broadcastSubscribersCount.textContent = `${localSubs.length} Subscriber${localSubs.length === 1 ? '' : 's'}`;
+    
+    // Reset selection option to 'all'
+    const audienceTypeSelect = document.getElementById('broadcast-audience-type');
+    if (audienceTypeSelect) {
+      audienceTypeSelect.value = 'all';
+      window.toggleBroadcastAudienceView();
+    }
+
+    // Populate subscribers dropdown list
+    const singleEmailSelect = document.getElementById('broadcast-single-email');
+    if (singleEmailSelect) {
+      singleEmailSelect.innerHTML = '';
+      localSubs.forEach(s => {
+        const email = typeof s === 'string' ? s : s.email;
+        const name = typeof s === 'string' ? 'Subscriber' : (s.name || 'Subscriber');
+        const opt = document.createElement('option');
+        opt.value = email;
+        opt.textContent = `${name} (${email})`;
+        singleEmailSelect.appendChild(opt);
+      });
+    }
+
     if (broadcastDialog) broadcastDialog.showModal();
   };
 
@@ -1125,14 +1161,25 @@ document.addEventListener('DOMContentLoaded', () => {
       // Close the dialog immediately
       if (broadcastDialog) broadcastDialog.close();
 
-      // Trigger EmailJS dispatch
-      window.broadcastNewPost(post);
+      // Check selected audience type
+      const audienceType = document.getElementById('broadcast-audience-type').value;
+      if (audienceType === 'single') {
+        const targetEmail = document.getElementById('broadcast-single-email').value;
+        if (targetEmail) {
+          window.broadcastNewPost(post, targetEmail);
+        } else {
+          showToast("❌ No subscriber selected!");
+        }
+      } else {
+        // Send to all
+        window.broadcastNewPost(post);
+      }
       
       pendingBroadcastId = null;
     });
   }
 
-  window.broadcastNewPost = function(post) {
+  window.broadcastNewPost = function(post, targetEmail = null) {
     const serviceId = localStorage.getItem('emailjs-service-id');
     const templateId = localStorage.getItem('emailjs-template-id');
     const publicKey = localStorage.getItem('emailjs-public-key');
@@ -1140,17 +1187,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. If not configured, run in Mock Sandbox Mode
     if (!serviceId || !templateId || !publicKey) {
-      showToast("📬 Sandbox Mode: Simulated newsletter push successfully!");
+      if (targetEmail) {
+        showToast(`📬 Sandbox Mode: Simulated newsletter push to '${targetEmail}' successfully!`);
+      } else {
+        showToast("📬 Sandbox Mode: Simulated newsletter push successfully!");
+      }
       // Mark as broadcasted locally
       markPostAsBroadcasted(post.id);
       return;
     }
 
     // 2. Real-time EmailJS Broadcast Loop
-    showToast("✉️ Preparing subscriber broadcast...");
+    showToast(targetEmail ? `✉️ Preparing email dispatch to ${targetEmail}...` : "✉️ Preparing subscriber broadcast...");
     
-    const localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
+    let localSubs = JSON.parse(localStorage.getItem('blog-subscribers')) || [];
     if (localSubs.length === 0) return;
+
+    if (targetEmail) {
+      localSubs = localSubs.filter(s => {
+        const email = typeof s === 'string' ? s : s.email;
+        return email === targetEmail;
+      });
+      if (localSubs.length === 0) {
+        localSubs = [{ email: targetEmail, name: 'Subscriber' }];
+      }
+    }
 
     // Load EmailJS SDK
     if (typeof emailjs === 'undefined') {
@@ -1193,7 +1254,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     Promise.all(promises).then(() => {
       if (sentCount > 0) {
-        showToast(`✔ Broadcast completed: ${sentCount} emails dispatched successfully!`);
+        if (targetEmail) {
+          showToast(`✔ Email successfully dispatched to ${targetEmail}!`);
+        } else {
+          showToast(`✔ Broadcast completed: ${sentCount} emails dispatched successfully!`);
+        }
         markPostAsBroadcasted(post.id);
       } else {
         showToast("❌ Broadcast failed. Please verify your EmailJS API keys.");
