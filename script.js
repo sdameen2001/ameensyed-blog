@@ -828,6 +828,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  window.printArticle = function() {
+    window.print();
+  };
+
   // Render initial blogs or route to admin if secret hash is provided
   const currentHash = window.location.hash;
   if (currentHash === '#admin' || currentHash === '#admin-login') {
